@@ -1,0 +1,35 @@
+name: Main
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: 
+      - master
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Test, build & deploy
+    runs-on: ubuntu-latest
+    if: github.repository == 'wireleap/client' && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'testable'))
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Check out private build action
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+        repository: wireleap/gh-build
+        token: ${{ secrets.ASSEMBLY_TOKEN }}
+        path: .github/actions/gh-build
+    - name: Run component build action
+      uses: ./.github/actions/gh-build
+      with:
+          token: ${{ secrets.ASSEMBLY_TOKEN }}
+          ssh_key: ${{ secrets.SSH_KEY }}
+          upload_target: ${{ secrets.UPLOAD_TARGET }}
+          gpg_key: ${{ secrets.GPG_KEY }}
