@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+fatal() { echo "fatal: $*" 1>&2; exit 1; }
+
+cmd="$(basename "$0")"
+command -v "$cmd" >/dev/null || fatal "$cmd not found"
+[ "$WIRELEAP_SOCKS" ] || fatal "WIRELEAP_SOCKS not set"
+
+export HTTP_PROXY="socks5://$WIRELEAP_SOCKS"
+exec "$cmd" "$@"

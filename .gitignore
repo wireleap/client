@@ -1,0 +1,10 @@
+build/
+
+wireleap_intercept/wireleap_intercept.dylib
+wireleap_intercept/wireleap_intercept.so
+wireleap_intercept/wireleap_intercept.o
+
+sub/initcmd/embedded/*
+!sub/initcmd/embedded/*.go
+!sub/initcmd/embedded/scripts
+!sub/initcmd/embedded/DISCLAIMER
