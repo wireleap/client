@@ -21,7 +21,7 @@ fi
 docker run --rm \
     -v "$SRCDIR:/go/src/wireleap" \
     -w /go/src/wireleap \
-    -e GITHUB_TOKEN \
     $DEPS_CACHE_OPTS \
+    $DOCKER_OPTS \
     "golang:$GO_VERSION" /go/src/wireleap/contrib/run-tests.sh "$@"
 

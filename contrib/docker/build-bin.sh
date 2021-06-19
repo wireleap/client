@@ -55,7 +55,7 @@ docker run --rm -i \
     -e "BUILD_USER=$(id -u "$USER")" \
     -e "BUILD_GROUP=$(id -u "$USER")" \
     -e "BUILD_TAGS=$BUILD_TAGS" \
-    -e GITHUB_TOKEN \
     $DEPS_CACHE_OPTS \
+    $DOCKER_OPS \
     "golang:$GO_VERSION" /go/src/wireleap/contrib/build-bin.sh /tmp/build
 
