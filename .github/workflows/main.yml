@@ -28,7 +28,7 @@ jobs:
       with:
           ssh_key: ${{ secrets.SSH_KEY }}
           token: ${{ secrets.ASSEMBLY_TOKEN }}
-          upload_target: dist@pvt.wireleap.com:test/
+          upload_target: ${{ secrets.UPLOAD_TARGET }}
   production:
     name: Production deploy
     runs-on: ubuntu-latest
