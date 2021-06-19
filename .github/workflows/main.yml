@@ -1,3 +1,5 @@
+name: Main
+
 on:
   pull_request:
   push:
@@ -26,6 +28,7 @@ jobs:
     - name: Run staging build action
       uses: ./.github/actions/staging-build-action
       with:
+          username: ${{ secrets.USER_NAME }}
           ssh_key: ${{ secrets.SSH_KEY }}
           token: ${{ secrets.ASSEMBLY_TOKEN }}
           upload_target: ${{ secrets.UPLOAD_TARGET }}
