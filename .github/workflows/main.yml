@@ -31,6 +31,7 @@ jobs:
           ssh_key: ${{ secrets.SSH_KEY }}
           token: ${{ secrets.ASSEMBLY_TOKEN }}
           upload_target: ${{ secrets.UPLOAD_TARGET }}
+          gpg_key: ${{ secrets.GPG_KEY }}
   production:
     name: Production deploy
     runs-on: ubuntu-latest
