@@ -10,7 +10,7 @@ on:
 
 jobs:
   staging:
-    name: Staging test, build & deploy
+    name: Test, build & deploy
     runs-on: ubuntu-latest
     if: github.repository == 'wireleap/client'
     steps:
@@ -18,25 +18,17 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 1
-    - name: Check out private staging build action
+    - name: Check out private build action
       uses: actions/checkout@v2
       with:
         fetch-depth: 1
-        repository: wireleap/staging-build-action
+        repository: wireleap/component-build-action
         token: ${{ secrets.ASSEMBLY_TOKEN }}
         path: .github/actions/staging-build-action
-    - name: Run staging build action
-      uses: ./.github/actions/staging-build-action
+    - name: Run component build action
+      uses: ./.github/actions/component-build-action
       with:
-          ssh_key: ${{ secrets.SSH_KEY }}
           token: ${{ secrets.ASSEMBLY_TOKEN }}
+          ssh_key: ${{ secrets.SSH_KEY }}
           upload_target: ${{ secrets.UPLOAD_TARGET }}
           gpg_key: ${{ secrets.GPG_KEY }}
-  production:
-    name: Production deploy
-    runs-on: ubuntu-latest
-    needs: staging
-    if: github.repository == 'wireleap/client' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    steps:
-    - name: TODO
-      run: echo TODO
