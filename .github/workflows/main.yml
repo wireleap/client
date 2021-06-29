@@ -24,7 +24,7 @@ jobs:
         fetch-depth: 1
         repository: wireleap/component-build-action
         token: ${{ secrets.ASSEMBLY_TOKEN }}
-        path: .github/actions/staging-build-action
+        path: .github/actions/component-build-action
     - name: Run component build action
       uses: ./.github/actions/component-build-action
       with:
