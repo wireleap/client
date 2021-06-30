@@ -444,6 +444,9 @@ and the abbreviated hash of the HEAD commit.
 
 ## Building
 
+Note: If you would like to make changes to the source code, please
+following the [contributing](#contributing) instructions instead.
+
 **Clone the repository**
 
 ```shell
@@ -482,4 +485,161 @@ DEPS_CACHE=build/.deps ./contrib/docker/build-bin.sh build/
 If you prefer to use your host system instead of docker, you can do so
 with `contrib/build-bin.sh` provided you have the relevant dependencies
 installed.
+
+## Contributing
+
+This flow is loosely based on the standard [GitHub flow][github_flow]
+collaborative development model.
+
+Collaboration between developers is facilitated via pull requests from
+topic branches towards the `master` branch, and pull request reviews are
+used to achieve consensus before merging the changes into the `master`
+branch.
+
+A note about the `master` branch:
+
+- Anything in the master branch is deployable, builds successfully and
+  is tested to work. The CI/CD system performs both integration and unit
+  tests, but should be considered as only a filter to immediately
+  highlight PRs which would break the master branch and therefore need
+  to be either discarded or amended. Automated checks are no substitute
+  for code review, so all PRs are manually reviewed prior to merge.
+
+- Direct commits to the master branch are **prohibited**, with the
+  only exception being a core-dev pushing a signed git-tag signifying a
+  release.
+
+[github_flow]: https://guides.github.com/introduction/flow/
+
+### Fork, clone and setup upstream remote
+
+The following instructions outline the recommended procedure for
+creating a fork of this repository in order to contribute changes.
+
+Firstly, click the `fork` button at the top of the page. Once forked,
+clone your fork and set an upstream remote to keep track of changes.
+
+```shell
+git clone git@github.com:USERNAME/client.git
+
+cd client
+git remote add upstream git@github.com:wireleap/client.git
+git checkout master
+git pull --tags upstream master
+git config commit.gpgsign true
+```
+
+### Create a feature branch and make your changes
+
+Create a descriptively named topic branch based on the `master` branch.
+Please take care to only address **one** issue/bug/feature per pull
+request.
+
+```shell
+git checkout master
+git pull --tags upstream master
+git checkout -b DESCRIPTIVE_BRANCH_NAME
+```
+
+When making your changes, test and commit as you go. Try to make commits
+that capture an atomic change to the codebase. Source code should be
+documented where necessary and the rationale for changes included in
+commits should be clear.
+
+If a commit resolves a known issue or relates to other commits or PRs,
+please refer to them.
+
+### Unit testing
+
+The unit tests can either be run on your host or within docker using the
+official golang docker image.
+
+```shell
+# run unit tests on host
+./contrib/run-tests.sh
+
+# run unit tests in docker
+./contrib/docker/run-tests.sh
+
+# run unit tests in docker (specify cache for faster subsequent tests)
+mkdir -p build/.deps
+DEPS_CACHE=build/.deps ./contrib/docker/run-tests.sh
+```
+
+### Rebase on master if needed
+
+It can happen that as you were working on a feature, the state of the
+`upstream/master` branch has changed due to merging other pull requests.
+In this case, rebase your topic branch on top of the `master` branch. If
+needed, resolve merge conflicts.
+
+```shell
+git checkout master
+git fetch upstream
+git merge upstream/master
+git rebase --interactive master DESCRIPTIVE_BRANCH_NAME
+```
+
+After every change to the git history of your topic branch, perform
+testing to avoid regressions.
+
+### Push changes and submit a pull request
+
+When you think the topic branch is ready for merging, passes all tests,
+all changes are committed with appropriate commit messages, and your
+topic branch is based on the current state of the `upstream/master`
+branch, push them to the **topic branch** (not master) of your fork.
+
+```shell
+# push changes
+git push origin DESCRIPTIVE_BRANCH_NAME
+
+# if you have already pushed commits to a topic branch, and later
+# performed a rebase on top of master, a force push will be required
+git push --force origin DESCRIPTIVE_BRANCH_NAME
+```
+
+Once pushed, follow the link specified in the `git push` output and
+click `pull request`. Give your changes a last-minute correctness check,
+and supply the high-level description of the changes.
+
+Finally, click `send pull request` so the reviewers can review and
+approve the changes, or request modifications prior to performing the
+merge.
+
+### Review process and merge
+
+The pull request may be approved or additional modifications might be
+requested by one of the reviewers. If modifications are requested,
+commit and push more changes to the **same** topic branch and they will
+be included in the original pull request until it is ultimately closed.
+
+Branch protection rules are in place. They include:
+
+- Requiring all commits in PRs to be signed.
+- Requiring all integration and unit tests to complete successfully.
+- Requiring at least one approval from a core-dev.
+
+If there is an issue with the proposed changes, modifications should be
+requested. For discussions on the rationale of certain choices in the
+code, GitHub comments in the respective files can be left for the author
+of the pull request to address.
+
+Please note that every merged pull request is considered final and it is
+always better to hold off on merging a pull request than have to open
+another one correcting the changes from the first one. Additionally, it
+is also sometimes a good idea to create pull requests towards another
+PRs topic branch instead of master. This allows unifying multiple sets
+of changes from different developers within the scope of a single PR.
+
+Merging changes that are not unanimously approved by all reviewers is
+**not** allowed unless special arrangements are in place (e.g. a
+reviewer is away and explicitly asked to not wait on them for merging
+changes).
+
+Once the above is satisfied and all the reviewers have approved the
+changes, the last person who gives their approval and has merge
+permissions will close the pull request by merging it into the `master`
+branch. However, if the author of the pull request has merge
+permissions, they may perform the merge subject to the above.
 
