@@ -2,6 +2,7 @@ name: Main
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: 
       - master
@@ -12,7 +13,7 @@ jobs:
   build:
     name: Test, build & deploy
     runs-on: ubuntu-latest
-    if: github.repository == 'wireleap/client'
+    if: github.repository == 'wireleap/client' && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'testable'))
     steps:
     - name: Check out code
       uses: actions/checkout@v2
