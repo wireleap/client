@@ -8,6 +8,29 @@ the common good.
 
 This repository is for the Wireleap client.
 
+## Table of contents
+
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Accesskeys](#accesskeys)
+- [Circuit](#circuit)
+- [Usage](#usage)
+    - [proxy settings](#proxy-settings)
+    - [wireleap exec](#wireleap-exec)
+    - [wireleap intercept](#wireleap-intercept)
+    - [wireleap tun](#wireleap-tun)
+- [Upgrade](#upgrade)
+- [Files](#files)
+- [Versioning](#versioning)
+- [Building](#building)
+- [Contributing](#contributing)
+    - [Fork, clone and setup upstream remote](#fork-clone-and-setup-upstream-remote)
+    - [Create a feature branch and make your changes](#create-a-feature-branch-and-make-your-changes)
+    - [Unit testing](#unit-testing)
+    - [Rebase on master if needed](#rebase-on-master-if-needed)
+    - [Push changes and submit a pull request](#push-changes-and-submit-a-pull-request)
+    - [Review process and merge](#review-process-and-merge)
+
 ## Installation
 
 The quickest way to install the Wireleap client is by using this
