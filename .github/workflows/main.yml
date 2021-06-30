@@ -9,7 +9,7 @@ on:
       - 'v*'
 
 jobs:
-  staging:
+  build:
     name: Test, build & deploy
     runs-on: ubuntu-latest
     if: github.repository == 'wireleap/client'
