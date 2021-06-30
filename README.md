@@ -1,7 +1,34 @@
-# wireleap client
+# Wireleap client
 
-This is the [wireleap](https://wireleap.com) client. The binary name is
-`wireleap`.
+[Wireleap](https://wireleap.com) is a public interest technology with
+the goal of enabling more access to knowledge and resources on the
+Internet for more people, no matter where they are. Our mission is to
+positively impact peoples lives, advance the public interest and benefit
+the common good.
+
+This repository is for the Wireleap client.
+
+## Installation
+
+The quickest way to install the Wireleap client is by using this
+convenience script:
+
+```shell
+curl -fsSL https://get.wireleap.com -o get-wireleap.sh
+sh get-wireleap.sh $HOME/wireleap --symlink=$HOME/.local/bin/wireleap
+```
+
+The above will verify your environments compatibility, download the
+latest client binary as well as the associated hash file to
+cryptographically verify its integrity via GPG signature (in a temporary
+keyring) and checksum hash. If all checks pass, it will release the
+binary from quarantine, initialize the client in the specified
+directory, and create a symlink.
+
+Alternatively, you can download the [latest release][releases] and
+perform manual verification and installation.
+
+[releases]: https://github.com/wireleap/client/releases
 
 ## Configuration
 
