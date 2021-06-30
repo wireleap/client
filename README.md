@@ -26,7 +26,8 @@ binary from quarantine, initialize the client in the specified
 directory, and create a symlink.
 
 Alternatively, you can download the [latest release][releases] and
-perform manual verification and installation.
+perform manual verification and installation, or [build from
+source](#building).
 
 [releases]: https://github.com/wireleap/client/releases
 
@@ -425,4 +426,60 @@ modifications are required, just save your version of the script under
 the same name in `scripts/` as the `scripts/default/` script you wish to
 alter. This ensures that updates will not overwrite user changes to
 scripts.
+
+## Versioning
+
+Releases are based on [semantic versioning](https://semver.org),
+and use the format `MAJOR.MINOR.PATCH`. While the MAJOR version is `0`,
+MINOR version bumps are considered MAJOR bumps per the semver spec.
+
+Git tags are used to specify the software version, which are manually
+assigned by tagging the relevant changelog entry. Only tagged versions
+are CI-built and released after all unit and integration tests have
+passed successfully.
+
+Note: Locally built binaries will include a suffix in addition to the
+latest tagged version, consisting of the number of commits past the tag
+and the abbreviated hash of the HEAD commit.
+
+## Building
+
+**Clone the repository**
+
+```shell
+git clone https://github.com/wireleap/client.git
+```
+
+**Checkout the latest tagged version**
+
+For locally built binaries to match the latest stable `wireleap`
+version, you will need to check out the latest git tag prior to
+building as opposed to building from master.
+
+```shell
+cd client
+git pull --tags origin master
+git checkout $(git describe `git rev-list --tags --max-count=1`)
+```
+
+**Build the binary**
+
+It is recommended to build the binary using docker, as described below
+which uses the official `golang` docker image.
+
+```shell
+# for your host operating system
+./contrib/docker/build-bin.sh build/
+
+# for a specific target os (linux / darwin)
+TARGET_OS=linux ./contrib/docker/build-bin.sh build/
+
+# specify a cache for faster subsequent builds
+mkdir -p build/.deps
+DEPS_CACHE=build/.deps ./contrib/docker/build-bin.sh build/
+```
+
+If you prefer to use your host system instead of docker, you can do so
+with `contrib/build-bin.sh` provided you have the relevant dependencies
+installed.
 
