@@ -37,7 +37,7 @@ case "$TARGET_OS" in
     "")     GOOS=""; UNAME="";;
     linux)  GOOS="linux"; UNAME="Linux";;
     darwin) GOOS="darwin"; UNAME="Darwin";;
-    *)      fatal "TARGET_OS not supported: $TARGETOS";;
+    *)      fatal "TARGET_OS not supported: $TARGET_OS";;
 esac
 
 if [ -n "$DEPS_CACHE" ]; then
