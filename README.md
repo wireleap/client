@@ -622,11 +622,11 @@ git push origin DESCRIPTIVE_BRANCH_NAME
 git push --force origin DESCRIPTIVE_BRANCH_NAME
 ```
 
-Once pushed, follow the link specified in the `git push` output and
-click `pull request`. Give your changes a last-minute correctness check,
-and supply the high-level description of the changes.
+Once pushed, follow the link specified in the `git push` output. Give
+your changes a last-minute correctness check, and supply the high-level
+description of the changes.
 
-Finally, click `send pull request` so the reviewers can review and
+Finally, click `create pull request` so the reviewers can review and
 approve the changes, or request modifications prior to performing the
 merge.
 
