@@ -30,6 +30,7 @@ This repository is for the Wireleap client.
     - [Rebase on master if needed](#rebase-on-master-if-needed)
     - [Push changes and submit a pull request](#push-changes-and-submit-a-pull-request)
     - [Review process and merge](#review-process-and-merge)
+- [License](#license)
 
 ## Installation
 
@@ -665,4 +666,8 @@ changes, the last person who gives their approval and has merge
 permissions will close the pull request by merging it into the `master`
 branch. However, if the author of the pull request has merge
 permissions, they may perform the merge subject to the above.
+
+## License
+
+The MIT License (MIT)
 
