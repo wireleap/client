@@ -44,6 +44,8 @@ for c in common/api common/cli client; do
     VERSIONS="$VERSIONS -X github.com/wireleap/$c/version.GITREV=$GITVERSION"
 done
 
+cp "$SRCDIR/LICENSE" "$SRCDIR/sub/initcmd/embedded/"
+
 info "testing ..."
 go test \
     -parallel "$NPROC" \
