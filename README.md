@@ -110,7 +110,7 @@ wireleap config address.socks 127.0.0.1:3434
 ```
 
 After changing configuration options via `wireleap config`, the changes
-will be applied immediately.
+will be applied immediately (except for `address` fields).
 
 ## Accesskeys
 
@@ -127,8 +127,8 @@ between payment information and network usage.
 wireleap import path/to/accesskeys.json
 cat path/to/accesskeys.json | wireleap import -
 
-# import accesskeys from url (replace :id)
-wireleap import https://example.com/accesskeys/:id
+# import accesskeys from url
+wireleap import https://example.com/accesskeys/REPLACE_WITH_ACCESSKEY_ID
 ```
 
 Accesskeys are used to activate servicekeys, which can be done
