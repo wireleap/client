@@ -23,11 +23,11 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 1
-        repository: wireleap/component-build-action
+        repository: wireleap/gh-build
         token: ${{ secrets.ASSEMBLY_TOKEN }}
-        path: .github/actions/component-build-action
+        path: .github/actions/gh-build
     - name: Run component build action
-      uses: ./.github/actions/component-build-action
+      uses: ./.github/actions/gh-build
       with:
           token: ${{ secrets.ASSEMBLY_TOKEN }}
           ssh_key: ${{ secrets.SSH_KEY }}
