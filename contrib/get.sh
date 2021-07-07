@@ -112,7 +112,7 @@ _download() {
     filename="$1"
     eval set -- "$2"
     dist="https://github.com/wireleap/client/releases/latest/download/"
-    curl "$@" -O "$dist/$filename" || fatal "$filename download failed"
+    curl "$@" -LO "$dist/$filename" || fatal "$filename download failed"
     return 0
 }
 
