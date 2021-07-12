@@ -20,7 +20,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Run component build action
-      uses: wireleap/gh-build
+      uses: wireleap/gh-build@master
       with:
           token: ${{ secrets.GH_TEST_TOKEN }}
           ssh_key: ${{ secrets.SSH_KEY }}
