@@ -10,4 +10,5 @@ require (
 	github.com/vishvananda/netlink v1.1.0
 	github.com/wireleap/common v0.1.0
 	golang.org/x/net v0.0.0-20210610132358-84b48f89b13b
+	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
 )
