@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Wireleap Ltd.
+// Copyright (c) 2021 Wireleap
 
 package embedded
 
