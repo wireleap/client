@@ -173,15 +173,15 @@ main() {
     _download "${binary}_$os-amd64.hash" "--silent --show-error"
 
     echo "* performing gpg verification on $binary.hash ..."
-    _verify_gpg "$binary.hash" || fatal "gpg error\n$(cat out.gpg)"
+    _verify_gpg "${binary}_$os-amd64.hash" || fatal "gpg error\n$(cat out.gpg)"
 
     echo "* performing checksum verification on $binary ..."
-    _verify_checksum "$binary.hash"
+    _verify_checksum "${binary}_$os-amd64.hash"
 
     echo "* releasing $binary from quarantine ..."
     cd "$binarydir"
-    mv "$binarydir/quarantine/$binary" "$binarydir/$binary"
-    rm "$binarydir/quarantine/$binary.hash"
+    mv "$binarydir/quarantine/${binary}_$os-amd64" "$binarydir/$binary"
+    rm "$binarydir/quarantine/${binary}_$os-amd64.hash"
     rmdir "$binarydir/quarantine"
 
     echo "* setting $binary executable flag ..."
