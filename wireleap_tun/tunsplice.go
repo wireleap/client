@@ -236,8 +236,8 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 							go func() {
 								defer nat.Unlock()
 								c, err := h2conn.New(tt, h2caddr, map[string]string{
-									"Sm-Dial-Protocol": "tcp",
-									"Sm-Dial-Target":   dstaddr,
+									"Wl-Dial-Protocol": "tcp",
+									"Wl-Dial-Target":   dstaddr,
 								})
 								if err != nil {
 									pt.Del(ptable.TCP, natport)
@@ -287,8 +287,8 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 								trl.TransportFlow().Dst().String(),
 							)
 							c, err := h2conn.New(tt, h2caddr, map[string]string{
-								"Sm-Dial-Protocol": "udp",
-								"Sm-Dial-Target":   dstaddr,
+								"Wl-Dial-Protocol": "udp",
+								"Wl-Dial-Target":   dstaddr,
 							})
 							if err != nil {
 								log.Printf("error udp wireleap-dialing %s: %s", dstaddr, err)
