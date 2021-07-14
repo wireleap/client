@@ -69,6 +69,15 @@ func Cmd() *cli.Subcmd {
 				return dialf(proto, remote)
 			}
 		}
+		// write bypass
+		writeBypass := func(extra ...string) error {
+			// expose bypass for wireleap_tun
+			sc := cache.Get(c.Contract.Hostname())
+			dir := cache.Get(di.Endpoint.Hostname())
+			bypass := append(sc, dir...)
+			bypass = append(bypass, extra...)
+			return fm.Set(bypass, filenames.Bypass)
+		}
 		// make circuit
 		syncinfo := func() error {
 			if c.Contract == nil {
@@ -88,6 +97,12 @@ func Cmd() *cli.Subcmd {
 		if c.Contract != nil {
 			if err = syncinfo(); err != nil {
 				log.Fatalf("could not get contract info: %s", err)
+			}
+			if err = writeBypass(); err != nil {
+				log.Fatalf(
+					"could not write first bypass file %s: %s",
+					fm.Path(filenames.Bypass), err,
+				)
 			}
 		}
 		circuitf := func() (r []*relayentry.T, err error) {
@@ -118,13 +133,7 @@ func Cmd() *cli.Subcmd {
 			}
 			circ = r
 			// expose bypass for wireleap_tun
-			sc := cache.Get(c.Contract.Hostname())
-			dir := cache.Get(di.Endpoint.Hostname())
-			bypass := append(sc, dir...)
-			if len(r) > 0 {
-				bypass = append(bypass, cache.Get(r[0].Addr.Hostname())...)
-			}
-			err = fm.Set(bypass, filenames.Bypass)
+			err = writeBypass(cache.Get(r[0].Addr.Hostname())...)
 			return
 		}
 		// cache dns, sc and directory data if we can
