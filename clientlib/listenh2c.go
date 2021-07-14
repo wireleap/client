@@ -25,8 +25,8 @@ func ListenH2C(addr string, tc *tls.Config, dialer DialFunc, errf func(error)) e
 			status.ErrMethod.WriteTo(w)
 			return
 		}
-		protocol := r.Header.Get("Sm-Dial-Protocol")
-		target := r.Header.Get("Sm-Dial-Target")
+		protocol := r.Header.Get("Wl-Dial-Protocol")
+		target := r.Header.Get("Wl-Dial-Target")
 		cc, err := dialer(protocol, target)
 		if err != nil {
 			log.Printf("h2->circuit dial failure: %s", err)
