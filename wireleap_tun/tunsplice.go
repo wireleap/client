@@ -92,12 +92,12 @@ func nextip(i1 net.IP) (i2 net.IP) {
 // appropriate form.
 func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 	var (
-		buf  = gopacket.NewSerializeBuffer()
-		opts = gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+		buf      = gopacket.NewSerializeBuffer()
+		opts     = gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+		if4, if6 *net.TCPAddr
 	)
 	log.Printf("capturing packets from %s and proxying via h2c://%s", t.Name(), h2caddr)
 	h2caddr = "http://" + h2caddr
-	ifaddrs := map[gopacket.LayerType]*net.TCPAddr{}
 	// setup addresses of tunside tcp forwarder
 	addrs, err := t.NetIf.Addrs()
 	if err != nil {
@@ -116,23 +116,21 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 	}
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok {
-			var lt gopacket.LayerType
 			if ipnet.IP.To4() == nil {
-				lt = layers.LayerTypeIPv6
+				if6 = &net.TCPAddr{IP: ipnet.IP, Port: tunport, Zone: t.Name()}
 			} else {
-				lt = layers.LayerTypeIPv4
+				if4 = &net.TCPAddr{IP: ipnet.IP, Port: tunport, Zone: t.Name()}
 			}
-			ifaddrs[lt] = &net.TCPAddr{IP: ipnet.IP, Port: tunport, Zone: t.Name()}
 		}
 	}
-	l4, err := net.ListenTCP("tcp4", ifaddrs[layers.LayerTypeIPv4])
+	l4, err := net.ListenTCP("tcp4", if4)
 	if err != nil {
-		return fmt.Errorf("could not listen v4 on %s: %s", ifaddrs[layers.LayerTypeIPv4], err)
+		return fmt.Errorf("could not listen v4 on %s: %s", if4, err)
 	}
 	log.Printf("listening on tcp4 socket %s", l4.Addr())
-	l6, err := net.ListenTCP("tcp6", ifaddrs[layers.LayerTypeIPv6])
+	l6, err := net.ListenTCP("tcp6", if6)
 	if err != nil {
-		return fmt.Errorf("could not listen v6 on %s: %s", ifaddrs[layers.LayerTypeIPv6], err)
+		return fmt.Errorf("could not listen v6 on %s: %s", if6, err)
 	}
 	log.Printf("listening on tcp6 socket %s", l6.Addr())
 	// h2c-enabled transport
@@ -162,6 +160,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 				gopacket.TransportLayer
 				gopacket.SerializableLayer
 			}
+			tunaddr      *net.TCPAddr
 			srcip, dstip *net.IP
 		)
 		v4p.DecodingLayerParserOptions.IgnoreUnsupported = true
@@ -190,23 +189,22 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 			for _, typ := range decoded {
 				switch typ {
 				case layers.LayerTypeIPv4:
-					ipl, srcip, dstip = &ip4, &ip4.SrcIP, &ip4.DstIP
+					tunaddr, ipl, srcip, dstip = if4, &ip4, &ip4.SrcIP, &ip4.DstIP
 				case layers.LayerTypeIPv6:
-					ipl, srcip, dstip = &ip6, &ip6.SrcIP, &ip6.DstIP
+					tunaddr, ipl, srcip, dstip = if6, &ip6, &ip6.SrcIP, &ip6.DstIP
 				case layers.LayerTypeTCP:
 					trl = &tcp
 					tcp.SetNetworkLayerForChecksum(ipl)
 
-					lo := ifaddrs[ipl.LayerType()]
-					if !srcip.Equal(lo.IP) {
+					if !srcip.Equal(tunaddr.IP) {
 						// not interested
 						continue
 					}
-					if tcp.SrcPort == layers.TCPPort(lo.Port) {
+					if tcp.SrcPort == layers.TCPPort(tunaddr.Port) {
 						// packet from tcp socket to virtual nexthop
 						if nat := pt.Get(ptable.TCP, int(tcp.DstPort)); nat != nil {
 							// redirect to client
-							*dstip = copyip(lo.IP)
+							*dstip = copyip(tunaddr.IP)
 							*srcip = copyip(nat.DstIP)
 							tcp.SrcPort = layers.TCPPort(nat.DstPort)
 							if tcp.FIN {
@@ -247,9 +245,9 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 								nat.Conn = c
 							}()
 						}
-						*srcip = nextip(lo.IP)
-						*dstip = copyip(lo.IP)
-						tcp.DstPort = layers.TCPPort(lo.Port)
+						*srcip = nextip(tunaddr.IP)
+						*dstip = copyip(tunaddr.IP)
+						tcp.DstPort = layers.TCPPort(tunaddr.Port)
 					}
 					err = gopacket.SerializeLayers(buf, opts, ipl, trl, gopacket.Payload(tcp.Payload))
 					if err != nil {
