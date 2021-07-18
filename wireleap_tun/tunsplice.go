@@ -204,9 +204,21 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 						// packet from tcp socket to virtual nexthop
 						if nat := pt.Get(ptable.TCP, int(tcp.DstPort)); nat != nil {
 							// redirect to client
-							*dstip = copyip(tunaddr.IP)
-							*srcip = copyip(nat.DstIP)
-							tcp.SrcPort = layers.TCPPort(nat.DstPort)
+							var (
+								newsrc = copyip(nat.DstIP)
+								newdst = copyip(tunaddr.IP)
+							)
+							if (newsrc.To4() == nil) != (newdst.To4() == nil) {
+								log.Printf(
+									"IP family mismatch after NAT: nat entry %+v old src %s:%d new src %s:%d is v4 but old dst %s:%d new dst %s:%d is v6",
+									nat,
+									srcip, tcp.SrcPort,
+									newsrc, nat.DstPort,
+									dstip, tcp.DstPort,
+									newdst, tcp.DstPort,
+								)
+							}
+							*srcip, *dstip, tcp.SrcPort = newsrc, newdst, layers.TCPPort(nat.DstPort)
 							if tcp.FIN || tcp.RST {
 								// clean up finished connection
 								pt.Del(ptable.TCP, int(tcp.DstPort))
