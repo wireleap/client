@@ -207,7 +207,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 							*dstip = copyip(tunaddr.IP)
 							*srcip = copyip(nat.DstIP)
 							tcp.SrcPort = layers.TCPPort(nat.DstPort)
-							if tcp.FIN {
+							if tcp.FIN || tcp.RST {
 								// clean up finished connection
 								pt.Del(ptable.TCP, int(tcp.DstPort))
 							}
