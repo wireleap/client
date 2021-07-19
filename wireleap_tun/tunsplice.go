@@ -142,7 +142,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 	}
 	go tcpfwd(l4)
 	go tcpfwd(l6)
-	r := tun.NewReader(t)
+	r, w := tun.NewReader(t), tun.NewWriter(t)
 	go func() {
 		var (
 			ip4     layers.IPv4
@@ -261,11 +261,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 						log.Printf("could not serialize tcp: %s %+v %+v", err, srcip, dstip)
 						continue
 					}
-					_, err = t.Write(buf.Bytes())
-					if err != nil {
-						log.Printf("could not write tcp packet to tun: %s %+v %+v", err, srcip, dstip)
-						continue
-					}
+					w.Send(buf.Bytes())
 				case layers.LayerTypeUDP:
 					trl = &udp
 					udp.SetNetworkLayerForChecksum(ipl)
@@ -339,11 +335,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 									log.Printf("could not serialize udp: %s %+v %+v", err, v4l, v6l)
 									return
 								}
-								_, err = t.Write(sbuf.Bytes())
-								if err != nil {
-									log.Printf("could not write udp packet: %s %+v %+v", err, v4l, v6l)
-									return
-								}
+								w.Send(buf.Bytes())
 							}
 						}()
 					}
