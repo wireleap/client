@@ -142,6 +142,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 	}
 	go tcpfwd(l4)
 	go tcpfwd(l6)
+	r := tun.NewReader(t)
 	go func() {
 		var (
 			ip4     layers.IPv4
@@ -165,14 +166,8 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 		)
 		v4p.DecodingLayerParserOptions.IgnoreUnsupported = true
 		v6p.DecodingLayerParserOptions.IgnoreUnsupported = true
-		rbuf := make([]byte, 65535)
 		for {
-			n, err := t.Read(rbuf)
-			if err != nil {
-				fmt.Println("error reading packet data:", err)
-				continue
-			}
-			data := rbuf[:n]
+			data := r.Recv()
 			switch data[0] >> 4 {
 			case 4:
 				err = v4p.DecodeLayers(data, &decoded)
