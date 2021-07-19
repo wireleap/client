@@ -210,7 +210,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 							)
 							if (newsrc.To4() == nil) != (newdst.To4() == nil) {
 								log.Printf(
-									"IP family mismatch after NAT: nat entry %+v old src %s:%d new src %s:%d is v4 but old dst %s:%d new dst %s:%d is v6",
+									"IP family mismatch after NAT: nat entry %+v old src %s:%d new src %s:%d but old dst %s:%d new dst %s:%d",
 									nat,
 									srcip, tcp.SrcPort,
 									newsrc, nat.DstPort,
