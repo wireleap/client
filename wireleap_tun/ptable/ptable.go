@@ -5,6 +5,7 @@ package ptable
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 )
 
 type Family int
@@ -24,9 +25,14 @@ type Entry struct {
 	Conn       net.Conn
 }
 
-// WARNING: not concurrency-safe. Write from one thread only.
-type T [nfamilies * nports]*Entry
+type T [nfamilies * nports]atomic.Value
 
-func (t *T) Get(f Family, port int) (e *Entry) { return t[int(f*nports)+port] }
-func (t *T) Set(f Family, port int, e *Entry)  { t[int(f*nports)+port] = e }
-func (t *T) Del(f Family, port int)            { t[int(f*nports)+port] = nil }
+func (t *T) Get(f Family, port int) (e *Entry) {
+	v := t[int(f*nports)+port].Load()
+	if v == nil {
+		return (*Entry)(nil)
+	}
+	return v.(*Entry)
+}
+func (t *T) Set(f Family, port int, e *Entry) { t[int(f*nports)+port].Store(e) }
+func (t *T) Del(f Family, port int)           { t[int(f*nports)+port].Store((*Entry)(nil)) }
