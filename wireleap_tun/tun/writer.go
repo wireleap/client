@@ -10,8 +10,7 @@ func NewWriter(tunif *T) *Writer {
 	t := &Writer{queue: make(chan []byte, 1024)}
 	go func() {
 		for data := range t.queue {
-			_, err := tunif.Write(data)
-			if err != nil {
+			if _, err := tunif.Write(data); err != nil {
 				log.Println("error writing packet data:", err)
 				continue
 			}
