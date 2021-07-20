@@ -88,6 +88,52 @@ func nextip(i1 net.IP) (i2 net.IP) {
 	return
 }
 
+func listenDual(tunif *tun.T, tunaddr string) (if4, if6 *net.TCPAddr, err error) {
+	// setup addresses of tunside tcp forwarder
+	addrs, err := tunif.NetIf.Addrs()
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(addrs) > 2 {
+		err = fmt.Errorf("interface %s has more addresses than required, misconfiguration?", tunif.Name())
+		return
+	}
+	_, tunportstr, err := net.SplitHostPort(tunaddr)
+	if err != nil {
+		err = fmt.Errorf("could not parse tunaddr `%s`: %s", tunaddr, err)
+		return
+	}
+	tunport, err := strconv.Atoi(tunportstr)
+	if err != nil {
+		err = fmt.Errorf("could not parse tunaddr port `%s`: %s", tunportstr, err)
+		return
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok {
+			if ipnet.IP.To4() == nil {
+				if6 = &net.TCPAddr{IP: ipnet.IP, Port: tunport, Zone: tunif.Name()}
+			} else {
+				if4 = &net.TCPAddr{IP: ipnet.IP, Port: tunport, Zone: tunif.Name()}
+			}
+		}
+	}
+	l4, err := net.ListenTCP("tcp4", if4)
+	if err != nil {
+		err = fmt.Errorf("could not listen v4 on %s: %s", if4, err)
+		return
+	}
+	log.Printf("listening on tcp4 socket %s", l4.Addr())
+	l6, err := net.ListenTCP("tcp6", if6)
+	if err != nil {
+		err = fmt.Errorf("could not listen v6 on %s: %s", if6, err)
+		return
+	}
+	log.Printf("listening on tcp6 socket %s", l6.Addr())
+	go tcpfwd(l4)
+	go tcpfwd(l6)
+	return
+}
+
 // tunsplice reads packets on the tun device and forwards them to wireleap in
 // appropriate form.
 func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
@@ -98,41 +144,6 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 	)
 	log.Printf("capturing packets from %s and proxying via h2c://%s", t.Name(), h2caddr)
 	h2caddr = "http://" + h2caddr
-	// setup addresses of tunside tcp forwarder
-	addrs, err := t.NetIf.Addrs()
-	if err != nil {
-		return err
-	}
-	if len(addrs) > 2 {
-		return fmt.Errorf("interface %s has more addresses than required, misconfiguration?", t.Name())
-	}
-	_, tunportstr, err := net.SplitHostPort(tunaddr)
-	if err != nil {
-		return fmt.Errorf("could not parse tunaddr `%s`: %s", tunaddr, err)
-	}
-	tunport, err := strconv.Atoi(tunportstr)
-	if err != nil {
-		return fmt.Errorf("could not parse tunaddr port `%s`: %s", tunportstr, err)
-	}
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok {
-			if ipnet.IP.To4() == nil {
-				if6 = &net.TCPAddr{IP: ipnet.IP, Port: tunport, Zone: t.Name()}
-			} else {
-				if4 = &net.TCPAddr{IP: ipnet.IP, Port: tunport, Zone: t.Name()}
-			}
-		}
-	}
-	l4, err := net.ListenTCP("tcp4", if4)
-	if err != nil {
-		return fmt.Errorf("could not listen v4 on %s: %s", if4, err)
-	}
-	log.Printf("listening on tcp4 socket %s", l4.Addr())
-	l6, err := net.ListenTCP("tcp6", if6)
-	if err != nil {
-		return fmt.Errorf("could not listen v6 on %s: %s", if6, err)
-	}
-	log.Printf("listening on tcp6 socket %s", l6.Addr())
 	// h2c-enabled transport
 	tt := &http2.Transport{
 		AllowHTTP: true,
@@ -140,8 +151,10 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 			return net.Dial(network, addr)
 		},
 	}
-	go tcpfwd(l4)
-	go tcpfwd(l6)
+	if4, if6, err := listenDual(t, tunaddr)
+	if err != nil {
+		return fmt.Errorf("couldn't listen on v4/v6 tcp socket: %s", err)
+	}
 	r, w := tun.NewReader(t), tun.NewWriter(t)
 	go func() {
 		var (
