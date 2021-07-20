@@ -1,26 +1,23 @@
-name: Master/tag update
+name: PR test
 
 on:
-  push:
-    branches: 
-      - master
-    tags:
-      - 'v*'
+  pull_request_target:
+    types: [labeled]
 
 jobs:
   build:
-    name: Test, build & deploy
+    name: Test & build
     runs-on: ubuntu-latest
-    if: github.repository == 'wireleap/client' && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'testable'))
+    if: github.repository == 'wireleap/client' && contains(github.event.pull_request.labels.*.name, 'testable')
     steps:
     - name: Check out code
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
     - name: Run component build action
       uses: wireleap/gh-build@master
       with:
           token: ${{ secrets.GH_TEST_TOKEN }}
           ssh_key: ${{ secrets.SSH_KEY }}
           upload_target: ${{ secrets.UPLOAD_TARGET }}
-          gpg_key: ${{ secrets.GPG_KEY }}
