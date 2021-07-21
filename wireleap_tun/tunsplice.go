@@ -275,7 +275,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 							// handle errors by cleaning up nat entry
 							defer pt.Del(ptable.UDP, natport)
 							if _, err := c.Write(udp.Payload); err != nil {
-								log.Printf("error udp writing to %s: %s", dstaddr, err)
+								log.Printf("error udp writing initial data to %s: %s", dstaddr, err)
 								return
 							}
 							var (
@@ -290,9 +290,12 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 								udp  = layers.UDP{}
 							)
 							for {
+								c.SetDeadline(time.Now().Add(time.Second * 10))
 								n, err := c.Read(rbuf)
 								if err != nil {
-									log.Printf("could not read from udp conn: %s", err)
+									if DEBUG {
+										log.Printf("could not read from udp conn: %s", err)
+									}
 									return
 								}
 								if ip4 := srcip.To4(); ip4 != nil {
@@ -307,7 +310,9 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 								udp.SetNetworkLayerForChecksum(nl)
 								err = gopacket.SerializeLayers(sbuf, opts, nl, &udp, gopacket.Payload(rbuf[:n]))
 								if err != nil {
-									log.Printf("could not serialize udp: %s %+v %+v", err, v4l, v6l)
+									if DEBUG {
+										log.Printf("could not serialize udp: %s %+v %+v", err, v4l, v6l)
+									}
 									return
 								}
 								// copy bytes
@@ -321,8 +326,11 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 					})
 				} else {
 					c := nat.Conn()
+					c.SetDeadline(time.Now().Add(time.Second * 10))
 					if _, err = c.Write(udp.Payload); err != nil {
-						log.Printf("error udp writing to %s: %s", *dstip, err)
+						if DEBUG {
+							log.Printf("error udp writing to %s: %s", *dstip, err)
+						}
 						return
 					}
 				}
