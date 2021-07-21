@@ -260,6 +260,9 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 						ipl.NetworkFlow().Dst().String(),
 						udp.TransportFlow().Dst().String(),
 					)
+					// copy payload for async usage
+					p2 := make([]byte, len(udp.Payload))
+					copy(p2, udp.Payload)
 					pt.Set(ptable.UDP, natport, nat, func() (c net.Conn, err error) {
 						if c, err = dialf("udp", dstaddr); err != nil {
 							log.Printf("error wireleap-dialing udp %s: %s", dstaddr, err)
@@ -268,7 +271,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 						go func() {
 							// handle errors by cleaning up nat entry
 							defer pt.Del(ptable.UDP, natport)
-							if _, err := c.Write(udp.Payload); err != nil {
+							if _, err := c.Write(p2); err != nil {
 								log.Printf("error udp writing initial data to %s: %s", dstaddr, err)
 								return
 							}
