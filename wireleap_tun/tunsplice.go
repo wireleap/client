@@ -274,12 +274,11 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 						go func() {
 							// handle errors by cleaning up nat entry
 							defer pt.Del(ptable.UDP, natport)
-							if _, err = c.Write(udp.Payload); err != nil {
+							if _, err := c.Write(udp.Payload); err != nil {
 								log.Printf("error udp writing to %s: %s", dstaddr, err)
 								return
 							}
 							var (
-								n  int
 								nl interface {
 									gopacket.NetworkLayer
 									gopacket.SerializableLayer
@@ -291,7 +290,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 								udp  = layers.UDP{}
 							)
 							for {
-								n, err = c.Read(rbuf)
+								n, err := c.Read(rbuf)
 								if err != nil {
 									log.Printf("could not read from udp conn: %s", err)
 									return
