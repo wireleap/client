@@ -147,10 +147,6 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 			gopacket.NetworkLayer
 			gopacket.SerializableLayer
 		}
-		trl interface {
-			gopacket.TransportLayer
-			gopacket.SerializableLayer
-		}
 		tunaddr      *net.TCPAddr
 		srcip, dstip *net.IP
 		err          error
@@ -181,7 +177,6 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 			case layers.LayerTypeIPv6:
 				tunaddr, ipl, srcip, dstip = if6, &ip6, &ip6.SrcIP, &ip6.DstIP
 			case layers.LayerTypeTCP:
-				trl = &tcp
 				tcp.SetNetworkLayerForChecksum(ipl)
 
 				if !srcip.Equal(tunaddr.IP) {
@@ -221,7 +216,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 					if nat := pt.Get(ptable.TCP, natport); nat == nil {
 						dstaddr := net.JoinHostPort(
 							ipl.NetworkFlow().Dst().String(),
-							trl.TransportFlow().Dst().String(),
+							tcp.TransportFlow().Dst().String(),
 						)
 						pt.Set(ptable.TCP, natport, &ptable.Entry{
 							SrcIP:   copyip(*srcip),
@@ -239,7 +234,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 					*dstip = copyip(tunaddr.IP)
 					tcp.DstPort = layers.TCPPort(tunaddr.Port)
 				}
-				err = gopacket.SerializeLayers(buf, opts, ipl, trl, gopacket.Payload(tcp.Payload))
+				err = gopacket.SerializeLayers(buf, opts, ipl, &tcp, gopacket.Payload(tcp.Payload))
 				if err != nil {
 					log.Printf("could not serialize tcp: %s %+v %+v", err, srcip, dstip)
 					continue
@@ -250,7 +245,6 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 				copy(dup, out)
 				w.Send(dup)
 			case layers.LayerTypeUDP:
-				trl = &udp
 				udp.SetNetworkLayerForChecksum(ipl)
 				natport := int(udp.SrcPort)
 				if nat := pt.Get(ptable.UDP, natport); nat == nil {
@@ -264,7 +258,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 					}
 					dstaddr := net.JoinHostPort(
 						ipl.NetworkFlow().Dst().String(),
-						trl.TransportFlow().Dst().String(),
+						udp.TransportFlow().Dst().String(),
 					)
 					pt.Set(ptable.UDP, natport, nat, func() (c net.Conn, err error) {
 						if c, err = dialf("udp", dstaddr); err != nil {
