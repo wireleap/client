@@ -34,21 +34,13 @@ func spliceconn(c net.Conn) {
 		}
 		return
 	}
-	// wait on available connection
-	pe.Lock()
-	defer pe.Unlock()
-	if pe.Conn == nil {
-		if DEBUG {
-			log.Printf("no connection found for source port %d, ignoring", p)
-		}
-		return
-	}
 	sync := make(chan error)
-	go func() { _, err := io.Copy(c, pe.Conn); sync <- err }()
-	go func() { _, err := io.Copy(pe.Conn, c); sync <- err }()
+	upstream := pe.Conn()
+	go func() { _, err := io.Copy(c, upstream); sync <- err }()
+	go func() { _, err := io.Copy(upstream, c); sync <- err }()
 	e := <-sync // wait until EOF or error
 	c.Close()   // clean up
-	pe.Conn.Close()
+	upstream.Close()
 	<-sync // ignore 2nd error, it's caused by close
 	if DEBUG {
 		log.Println("tcp splice terminated, error =", e)
@@ -227,28 +219,21 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 					// redirect to tcp socket with spoofed nexthop srcaddr
 					natport := int(tcp.SrcPort)
 					if nat := pt.Get(ptable.TCP, natport); nat == nil {
-						nat = &ptable.Entry{
-							SrcIP:   copyip(*srcip),
-							DstIP:   copyip(*dstip),
-							SrcPort: natport,
-							DstPort: int(tcp.DstPort),
-						}
-						pt.Set(ptable.TCP, natport, nat)
-						nat.Lock()
 						dstaddr := net.JoinHostPort(
 							ipl.NetworkFlow().Dst().String(),
 							trl.TransportFlow().Dst().String(),
 						)
-						go func() {
-							defer nat.Unlock()
-							c, err := dialf("tcp", dstaddr)
-							if err != nil {
-								pt.Del(ptable.TCP, natport)
-								log.Printf("error wireleap-dialing %s: %s", dstaddr, err)
-								return
+						pt.Set(ptable.TCP, natport, &ptable.Entry{
+							SrcIP:   copyip(*srcip),
+							DstIP:   copyip(*dstip),
+							SrcPort: natport,
+							DstPort: int(tcp.DstPort),
+						}, func() (c net.Conn, err error) {
+							if c, err = dialf("tcp", dstaddr); err != nil {
+								log.Printf("error wireleap-dialing tcp %s: %s", dstaddr, err)
 							}
-							nat.Conn = c
-						}()
+							return
+						})
 					}
 					*srcip = nextip(tunaddr.IP)
 					*dstip = copyip(tunaddr.IP)
@@ -268,8 +253,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 				trl = &udp
 				udp.SetNetworkLayerForChecksum(ipl)
 				natport := int(udp.SrcPort)
-				nat := pt.Get(ptable.UDP, natport)
-				if nat == nil {
+				if nat := pt.Get(ptable.UDP, natport); nat == nil {
 					// copy stored variables
 					srcip, dstip, srcport, dstport := copyip(*srcip), copyip(*dstip), udp.SrcPort, udp.DstPort
 					nat = &ptable.Entry{
@@ -278,74 +262,67 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 						SrcPort: natport,
 						DstPort: int(dstport),
 					}
-					// lock while establishing connection
-					nat.Lock()
-					pt.Set(ptable.UDP, natport, nat)
-					go func() {
-						defer pt.Del(ptable.UDP, natport)
-						dstaddr := net.JoinHostPort(
-							ipl.NetworkFlow().Dst().String(),
-							trl.TransportFlow().Dst().String(),
-						)
-						c, err := dialf("udp", dstaddr)
-						if err != nil {
-							nat.Unlock()
-							log.Printf("error udp wireleap-dialing %s: %s", dstaddr, err)
+					dstaddr := net.JoinHostPort(
+						ipl.NetworkFlow().Dst().String(),
+						trl.TransportFlow().Dst().String(),
+					)
+					pt.Set(ptable.UDP, natport, nat, func() (c net.Conn, err error) {
+						if c, err = dialf("udp", dstaddr); err != nil {
+							log.Printf("error wireleap-dialing udp %s: %s", dstaddr, err)
 							return
 						}
-						nat.Conn = c
-						nat.Unlock()
-						_, err = c.Write(udp.Payload)
-						if err != nil {
-							log.Printf("error udp writing to %s: %s", dstaddr, err)
-							return
-						}
-						var (
-							nl interface {
-								gopacket.NetworkLayer
-								gopacket.SerializableLayer
-							}
-							sbuf = gopacket.NewSerializeBuffer()
-							rbuf = make([]byte, 4096) // is this enough?
-							v4l  = layers.IPv4{Version: 4, Protocol: layers.IPProtocolUDP}
-							v6l  = layers.IPv6{Version: 6, NextHeader: layers.IPProtocolUDP}
-							udp  = layers.UDP{}
-						)
-						for {
-							nat.Conn.SetDeadline(time.Now().Add(time.Second * 5))
-							n, err := nat.Conn.Read(rbuf)
-							if err != nil {
+						go func() {
+							// handle errors by cleaning up nat entry
+							defer pt.Del(ptable.UDP, natport)
+							if _, err = c.Write(udp.Payload); err != nil {
+								log.Printf("error udp writing to %s: %s", dstaddr, err)
 								return
 							}
-							if ip4 := srcip.To4(); ip4 != nil {
-								// v4
-								v4l.SrcIP, v4l.DstIP, nl = dstip, ip4, &v4l
-							} else {
-								// v6
-								v6l.SrcIP, v6l.DstIP, nl = dstip, srcip, &v6l
+							var (
+								n  int
+								nl interface {
+									gopacket.NetworkLayer
+									gopacket.SerializableLayer
+								}
+								sbuf = gopacket.NewSerializeBuffer()
+								rbuf = make([]byte, 4096) // is this enough?
+								v4l  = layers.IPv4{Version: 4, Protocol: layers.IPProtocolUDP}
+								v6l  = layers.IPv6{Version: 6, NextHeader: layers.IPProtocolUDP}
+								udp  = layers.UDP{}
+							)
+							for {
+								n, err = c.Read(rbuf)
+								if err != nil {
+									log.Printf("could not read from udp conn: %s", err)
+									return
+								}
+								if ip4 := srcip.To4(); ip4 != nil {
+									// v4
+									v4l.SrcIP, v4l.DstIP, nl = dstip, ip4, &v4l
+								} else {
+									// v6
+									v6l.SrcIP, v6l.DstIP, nl = dstip, srcip, &v6l
+								}
+								udp.SrcPort = layers.UDPPort(dstport)
+								udp.DstPort = layers.UDPPort(srcport)
+								udp.SetNetworkLayerForChecksum(nl)
+								err = gopacket.SerializeLayers(sbuf, opts, nl, &udp, gopacket.Payload(rbuf[:n]))
+								if err != nil {
+									log.Printf("could not serialize udp: %s %+v %+v", err, v4l, v6l)
+									return
+								}
+								// copy bytes
+								out := sbuf.Bytes()
+								dup := make([]byte, len(out))
+								copy(dup, out)
+								w.Send(dup)
 							}
-							udp.SrcPort = layers.UDPPort(dstport)
-							udp.DstPort = layers.UDPPort(srcport)
-							udp.SetNetworkLayerForChecksum(nl)
-							err = gopacket.SerializeLayers(sbuf, opts, nl, &udp, gopacket.Payload(rbuf[:n]))
-							if err != nil {
-								log.Printf("could not serialize udp: %s %+v %+v", err, v4l, v6l)
-								return
-							}
-							// copy bytes
-							out := sbuf.Bytes()
-							dup := make([]byte, len(out))
-							copy(dup, out)
-							w.Send(dup)
-						}
-					}()
-				}
-				nat.Lock()
-				nat.Unlock()
-				if nat.Conn != nil {
-					nat.Conn.SetDeadline(time.Now().Add(time.Second * 5))
-					_, err = nat.Conn.Write(udp.Payload)
-					if err != nil {
+						}()
+						return
+					})
+				} else {
+					c := nat.Conn()
+					if _, err = c.Write(udp.Payload); err != nil {
 						log.Printf("error udp writing to %s: %s", *dstip, err)
 						return
 					}
@@ -371,8 +348,9 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 		DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
 			return net.Dial(network, addr)
 		},
+		ReadIdleTimeout: 10 * time.Second,
+		PingTimeout:     10 * time.Second,
 	}
-
 	dialf := func(proto, addr string) (*h2conn.T, error) {
 		return h2conn.New(tt, h2caddr, map[string]string{
 			"Wl-Dial-Protocol": proto,
