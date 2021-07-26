@@ -11,9 +11,9 @@ import (
 	"github.com/blang/semver"
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/filenames"
-	"github.com/wireleap/common/api/auth"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
+	"github.com/wireleap/common/api/interfaces/clientdir"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
@@ -104,7 +104,7 @@ func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
 		err = fmt.Errorf("`contract` field in config is empty, setup a contract with `wireleap import`")
 		return
 	}
-	cl := client.New(nil, auth.Client)
+	cl := client.New(nil, clientdir.T)
 	dinfo, err := consume.DirectoryInfo(cl, c.Contract)
 	if err != nil {
 		return

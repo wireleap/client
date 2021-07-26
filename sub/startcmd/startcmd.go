@@ -19,11 +19,12 @@ import (
 	"github.com/wireleap/client/dnscachedial"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/version"
-	"github.com/wireleap/common/api/auth"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
 	"github.com/wireleap/common/api/contractinfo"
 	"github.com/wireleap/common/api/dirinfo"
+	"github.com/wireleap/common/api/interfaces/clientcontract"
+	"github.com/wireleap/common/api/interfaces/clientdir"
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/relaylist"
 	"github.com/wireleap/common/api/status"
@@ -37,7 +38,7 @@ import (
 func Cmd() *cli.Subcmd {
 	run := func(fm fsdir.T) {
 		var (
-			cl   = client.New(nil, auth.Client)
+			cl   = client.New(nil, clientcontract.T, clientdir.T)
 			ci   *contractinfo.T
 			rl   relaylist.T
 			di   dirinfo.T
