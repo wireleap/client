@@ -3,9 +3,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/wireleap/common/api/interfaces/clientcontract"
+	"github.com/wireleap/common/api/interfaces/clientdir"
+	"github.com/wireleap/common/api/interfaces/clientrelay"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/commonsub/commonlib"
 	"github.com/wireleap/common/cli/commonsub/logcmd"
@@ -15,7 +17,6 @@ import (
 	"github.com/wireleap/common/cli/commonsub/upgradecmd"
 	"github.com/wireleap/common/cli/commonsub/versioncmd"
 	"github.com/wireleap/common/cli/upgrade"
-	"github.com/wireleap/common/wlnet"
 
 	"github.com/wireleap/client/sub/configcmd"
 	"github.com/wireleap/client/sub/execcmd"
@@ -70,11 +71,12 @@ func main() {
 			migratecmd.Cmd(binname, version.MIGRATIONS, version.VERSION),
 			infocmd.Cmd(),
 			logcmd.Cmd(binname),
-			versioncmd.Cmd(fmt.Sprintf(
-				"%s, protocol version %s",
-				version.GITREV,
-				wlnet.PROTO_VERSION.String(),
-			)),
+			versioncmd.Cmd(
+				&version.VERSION,
+				clientdir.T,
+				clientcontract.T,
+				clientrelay.T,
+			),
 		},
 	}.Parse(os.Args).Run(fm)
 }
