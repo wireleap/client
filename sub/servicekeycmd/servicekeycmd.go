@@ -15,6 +15,7 @@ import (
 	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/common/api/client"
+	"github.com/wireleap/common/api/interfaces/clientcontract"
 	"github.com/wireleap/common/api/pof"
 	"github.com/wireleap/common/api/servicekey"
 	"github.com/wireleap/common/cli"
@@ -46,7 +47,7 @@ func Cmd() *cli.Subcmd {
 			log.Fatalf("could not read pofs from pofs.json: %s", err)
 		}
 
-		cl := client.New(nil, "Client")
+		cl := client.New(nil, clientcontract.T)
 
 		sk := &servicekey.T{}
 		err = fm.Get(sk, filenames.Servicekey)

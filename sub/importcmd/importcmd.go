@@ -28,6 +28,7 @@ import (
 	"github.com/wireleap/common/api/apiversion"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
+	"github.com/wireleap/common/api/interfaces/clientcontract"
 	"github.com/wireleap/common/api/pof"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -135,7 +136,7 @@ func Cmd() *cli.Subcmd {
 			)
 		}
 
-		cl := client.New(nil, "Client")
+		cl := client.New(nil, clientcontract.T)
 		ci, d, err := clientlib.GetContractInfo(cl, ak.Contract.Endpoint)
 
 		if err != nil {
