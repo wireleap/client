@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/wireleap/client/clientcfg"
@@ -23,8 +24,12 @@ type SKSourceFunc func(bool) (*servicekey.T, error)
 
 // function to get a fresh sk if at all possible
 func SKSource(fm fsdir.T, c *clientcfg.C, cl *client.Client) SKSourceFunc {
+	var mu sync.Mutex
 	var sk *servicekey.T
 	return func(fetch bool) (r *servicekey.T, err error) {
+		mu.Lock()
+		defer mu.Unlock()
+
 		if sk == nil {
 			fm.Get(&sk, "servicekey.json")
 		}
