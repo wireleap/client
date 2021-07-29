@@ -108,12 +108,11 @@ func Cmd() *cli.Subcmd {
 		}
 		circuitf := func() (r []*relayentry.T, err error) {
 			// use existing if available
+			mu.Lock()
+			defer mu.Unlock()
 			if circ != nil {
 				return circ, nil
 			}
-			// if not, avoid race conditions
-			mu.Lock()
-			defer mu.Unlock()
 			if err = syncinfo(); err != nil {
 				return nil, err
 			}
