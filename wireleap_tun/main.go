@@ -92,10 +92,10 @@ func main() {
 		Dst:       &net.IPNet{IP: net.ParseIP("2000::"), Mask: net.CIDRMask(3, net.IPv6len*8)},
 	}}, routes...) {
 		log.Printf("adding route: %+v", r)
-		err = netlink.RouteReplace(&r)
-		if err != nil {
+		if err = netlink.RouteReplace(&r); err != nil {
 			log.Fatalf("could not add route to %s: %s", r.Dst, err)
 		}
+		log.Printf("added route to %s via %s", r.Dst, r.Gw)
 	}
 	pidfile := path.Join(sh, "wireleap_tun.pid")
 	finalize := func() {
