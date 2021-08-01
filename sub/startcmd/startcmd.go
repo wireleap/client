@@ -96,9 +96,19 @@ func Cmd() *cli.Subcmd {
 			return nil
 		}
 		if c.Contract != nil {
+			// cache dns, sc and directory data if we can
 			if err = syncinfo(); err != nil {
 				log.Fatalf("could not get contract info: %s", err)
 			}
+			// cache relay ip addresses for tun
+			if rl != nil {
+				for _, r := range rl.All() {
+					if err = cache.Cache(context.Background(), r.Addr.Hostname()); err != nil {
+						log.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
+					}
+				}
+			}
+			// write bypass for tun
 			if err = writeBypass(); err != nil {
 				log.Fatalf(
 					"could not write first bypass file %s: %s",
@@ -136,25 +146,7 @@ func Cmd() *cli.Subcmd {
 			err = writeBypass(cache.Get(r[0].Addr.Hostname())...)
 			return
 		}
-		// cache dns, sc and directory data if we can
 		sks := clientlib.SKSource(fm, &c, cl)
-		if _, err := sks(false); err == nil {
-			log.Printf("initializing...")
-			// cache sc pubkey and directory contents
-			if _, err := circuitf(); err == nil {
-				circ = nil
-				// cache all relay addresses just in case
-				if rl != nil {
-					for _, r := range rl.All() {
-						err = cache.Cache(context.Background(), r.Addr.Hostname())
-						if err != nil {
-							log.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
-						}
-					}
-				}
-				circuitf()
-			}
-		}
 		// maybe there's an upgrade available?
 		if di.Channels != nil {
 			if v, ok := di.Channels[version.Channel]; ok && v.GT(version.VERSION) {
