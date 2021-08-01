@@ -282,8 +282,8 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 								}
 								sbuf = gopacket.NewSerializeBuffer()
 								rbuf = make([]byte, 4096) // is this enough?
-								v4l  = layers.IPv4{Version: 4, Protocol: layers.IPProtocolUDP}
-								v6l  = layers.IPv6{Version: 6, NextHeader: layers.IPProtocolUDP}
+								v4l  = layers.IPv4{Version: 4, Protocol: layers.IPProtocolUDP, TTL: 64}
+								v6l  = layers.IPv6{Version: 6, NextHeader: layers.IPProtocolUDP, HopLimit: 64}
 								udp  = layers.UDP{}
 							)
 							for {
