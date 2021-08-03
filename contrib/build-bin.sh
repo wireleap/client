@@ -47,7 +47,6 @@ cp "$SRCDIR/LICENSE" "$SRCDIR/sub/initcmd/embedded/"
 info "building ..."
 CGO_ENABLED=0 go build -tags "$BUILD_TAGS" -o "$OUTDIR/wireleap" -ldflags "
     -X github.com/wireleap/client/version.GITREV=$GITVERSION \
-    -X github.com/wireleap/common/wlnet.PROTO_VERSION_STRING=$GITVERSION \
     -X github.com/wireleap/common/api/apiversion.VERSION_STRING=$GITVERSION
 "
 

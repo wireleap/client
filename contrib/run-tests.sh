@@ -51,7 +51,6 @@ go test \
     -parallel "$NPROC" \
     -ldflags "
         $VERSIONS
-        -X github.com/wireleap/common/wlnet.PROTO_VERSION_STRING=$GITVERSION \
         -X github.com/wireleap/common/api/apiversion.VERSION_STRING=$GITVERSION
     " \
     "$@" ./...
