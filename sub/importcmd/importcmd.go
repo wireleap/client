@@ -25,7 +25,6 @@ import (
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/version"
 	"github.com/wireleap/common/api/accesskey"
-	"github.com/wireleap/common/api/apiversion"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
 	"github.com/wireleap/common/api/interfaces/clientcontract"
@@ -116,11 +115,11 @@ func Cmd() *cli.Subcmd {
 			log.Fatal("malformed accesskey file")
 		}
 
-		if ak.Version.Minor != apiversion.VERSION.Minor {
+		if ak.Version.Minor != accesskey.VERSION.Minor {
 			log.Fatalf(
 				"incompatible accesskey version: %s, expected 0.%d.x",
 				ak.Version,
-				apiversion.VERSION.Minor,
+				accesskey.VERSION.Minor,
 			)
 		}
 
