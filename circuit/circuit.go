@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/wireleap/common/api/interfaces/clientrelay"
 	"github.com/wireleap/common/api/relayentry"
-	"github.com/wireleap/common/wlnet"
 )
 
 func init() { rand.Seed(time.Now().Unix()) }
@@ -21,7 +21,7 @@ type T []*relayentry.T
 func (t T) Partition() (fronting T, entropic T, backing T) {
 	for _, r := range t {
 		// exclude incompatible versions
-		if wlnet.VersionCheck(r.Version) != nil {
+		if r.Version.Minor != clientrelay.T.Version.Minor {
 			continue
 		}
 
