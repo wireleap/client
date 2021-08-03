@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/wireleap/common/api/interfaces/clientrelay"
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/servicekey"
 	"github.com/wireleap/common/api/sharetoken"
@@ -63,7 +64,7 @@ func CircuitDialer(
 				Protocol: "tcp",
 				Remote:   link.Addr,
 				Token:    st,
-				Version:  &wlnet.PROTO_VERSION,
+				Version:  &clientrelay.T.Version,
 			}
 			err = init.WriteTo(c)
 			if err != nil {
@@ -90,7 +91,7 @@ func CircuitDialer(
 			Protocol: protocol,
 			Remote:   &texturl.URL{*u},
 			Token:    st,
-			Version:  &wlnet.PROTO_VERSION,
+			Version:  &clientrelay.T.Version,
 		}
 		c, err = &wlnet.FragReadConn{Conn: c}, init.WriteTo(c)
 		return
