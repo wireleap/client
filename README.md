@@ -270,6 +270,7 @@ ls $HOME/wireleap/scripts/default
 # example usage
 wireleap exec curl URL
 wireleap exec git clone URL
+wireleap exec firefox [URL]
 wireleap exec google-chrome [URL]
 ```
 
