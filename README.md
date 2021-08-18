@@ -107,6 +107,9 @@ wireleap config address.socks
 
 # set the address of the connection broker (requires daemon restart)
 wireleap config address.socks 127.0.0.1:3434
+
+# to whitelist only the relays known as "foo" and "bar"
+wireleap config circuit.whitelist 'wireleap://foo:1234' 'wireleap://bar:4321'
 ```
 
 After changing configuration options via `wireleap config`, the changes
@@ -178,7 +181,7 @@ specific amount of hops, or a more general *only use these relays*.
 wireleap config circuit.hops 1
 
 # set a whitelist of relays to use
-wireleap config circuit.whitelist '["wireleap://relay1.example.com:13490"]'
+wireleap config circuit.whitelist "wireleap://relay1.example.com:13490"
 
 # manually trigger new circuit generation
 wireleap reload
