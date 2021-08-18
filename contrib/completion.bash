@@ -20,7 +20,7 @@ __wireleap_scripts() {
 __wireleap_relays() {
     local wlhome="$(__wireleap_home)"
     [ -f "${wlhome}/relays.json" ] || return 1
-    sed -n 's/^.*\"address\": \(\".*\"\),$/\1/p' < ${wlhome}/relays.json
+    sed -n 's/^.*\"address\": \"\(.*\)\",$/\1/p' < ${wlhome}/relays.json
 }
 
 __wireleap_comp() {
