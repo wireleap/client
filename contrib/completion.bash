@@ -1,7 +1,15 @@
 # bashrc: source path/to/completion.bash
+# depends: jq
 
 __wireleap_cmds() {
     wireleap help $1 2>&1 | awk '/^  [a-z\-]/ {print $1}'
+}
+
+__wireleap_scripts() {
+    command -v jq >/dev/null || return 1
+    local wlhome="$(wireleap info | jq -r '.wireleap_home')"
+    [ -d "${wlhome}/scripts" ] || return 1
+    find ${wlhome}/scripts -executable -type f -printf "%f\n" | uniq
 }
 
 __wireleap_comp() {
@@ -10,8 +18,10 @@ __wireleap_comp() {
             local words="$(__wireleap_cmds)";
             ;;
         3)
-
-            local words="$(__wireleap_cmds ${COMP_WORDS[1]})";
+            case "${COMP_WORDS[1]}" in
+                exec) local words="$(__wireleap_scripts)";;
+                *)    local words="$(__wireleap_cmds ${COMP_WORDS[1]})";;
+            esac
             ;;
         *)
             return 1
