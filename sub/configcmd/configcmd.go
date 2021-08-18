@@ -27,17 +27,29 @@ func Cmd(fm0 fsdir.T) *cli.Subcmd {
 	}
 
 	r.Run = func(fm fsdir.T) {
-		if fs.NArg() < 1 || fs.NArg() > 2 {
+		if fs.NArg() < 1 {
 			r.Usage()
 		}
 
 		key := fs.Arg(0)
 		val := fs.Arg(1)
+		vals := fs.Args()[1:]
 
-		if key == "" {
+		if key == "" || (key != "circuit.whitelist" && fs.NArg() > 2) {
 			r.Usage()
 		}
 
+		// pre-processing val list for circuit.whitelist to be in-line with all
+		// other arguments
+		if key == "circuit.whitelist" && len(vals) > 0 {
+			val_bytes, err := json.Marshal(&vals)
+			if err != nil {
+				log.Fatalf(
+					"could not marshal values for `circuit.whitelist`: %s",
+					err)
+			}
+			val = string(val_bytes)
+		}
 		Run(fm, key, val)
 	}
 
