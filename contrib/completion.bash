@@ -1,5 +1,8 @@
 # bashrc: source path/to/completion.bash
 # depends: jq
+# config circuit.whitelist gotchas:
+#   - needs to be manually prefixed with " pre TAB
+#   - post-completion needs to be wrapped '[ ... ]' and comma-delimited
 
 __wireleap_cmds() {
     wireleap help $1 2>&1 | awk '/^  [a-z\-]/ {print $1}'
@@ -10,6 +13,13 @@ __wireleap_scripts() {
     local wlhome="$(wireleap info | jq -r '.wireleap_home')"
     [ -d "${wlhome}/scripts" ] || return 1
     find ${wlhome}/scripts -executable -type f -printf "%f\n" | uniq
+}
+
+__wireleap_relays() {
+    command -v jq >/dev/null || return 1
+    local wlhome="$(wireleap info | jq -r '.wireleap_home')"
+    [ -f "${wlhome}/relays.json" ] || return 1
+    jq '.[].address' < ${wlhome}/relays.json
 }
 
 __wireleap_comp() {
@@ -24,7 +34,10 @@ __wireleap_comp() {
             esac
             ;;
         *)
-            return 1
+            case "${COMP_WORDS[2]}" in
+                circuit.whitelist) local words="$(__wireleap_relays)";;
+                *)                 return 1;;
+            esac
             ;;
     esac
     COMPREPLY=($(compgen -W "$words" -- "${COMP_WORDS[COMP_CWORD]}"));
