@@ -39,9 +39,17 @@ func Cmd(fm0 fsdir.T) *cli.Subcmd {
 			r.Usage()
 		}
 
-		// pre-processing val list for circuit.whitelist to be in-line with all
-		// other arguments
-		if key == "circuit.whitelist" && len(vals) > 0 {
+		// pre-processing val list for all "list" type config items to be in-line
+		// with all other arguments
+		var val_type string
+		c := clientcfg.Defaults()
+		for _, meta := range c.Metadata() {
+			if meta.Name == key {
+				val_type = meta.Type
+				break
+			}
+		}
+		if val_type == "list" && len(vals) > 0 {
 			val_bytes, err := json.Marshal(&vals)
 			if err != nil {
 				log.Fatalf(
