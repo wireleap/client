@@ -1,7 +1,6 @@
 # bashrc: source path/to/completion.bash
 # config circuit.whitelist gotchas:
 #   - needs to be manually prefixed with " pre TAB
-#   - post-completion needs to be wrapped '[ ... ]' and comma-delimited
 
 __wireleap_cmds() {
     wireleap help $1 2>&1 | awk '/^  [a-z\-]/ {print $1}'
