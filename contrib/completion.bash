@@ -1,6 +1,4 @@
 # bashrc: source path/to/completion.bash
-# config circuit.whitelist gotchas:
-#   - needs to be manually prefixed with " pre TAB
 
 __wireleap_cmds() {
     wireleap help $1 2>&1 | awk '/^  [a-z\-]/ {print $1}'
@@ -35,8 +33,13 @@ __wireleap_comp() {
             ;;
         *)
             case "${COMP_WORDS[2]}" in
-                circuit.whitelist) local words="$(__wireleap_relays)";;
-                *)                 return 1;;
+                circuit.whitelist)
+                    local cur="${COMP_WORDS[COMP_CWORD]}";
+                    local words="$(__wireleap_relays)";
+                    COMPREPLY=($(compgen -P \" -S \" -W "$words" -- "$cur"));
+                    return 0;;
+                *)
+                    return 1;;
             esac
             ;;
     esac
