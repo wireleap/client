@@ -35,7 +35,7 @@ func Cmd(fm0 fsdir.T) *cli.Subcmd {
 		val := fs.Arg(1)
 		vals := fs.Args()[1:]
 
-		if key == "" || (key != "circuit.whitelist" && fs.NArg() > 2) {
+		if key == "" {
 			r.Usage()
 		}
 
@@ -49,6 +49,11 @@ func Cmd(fm0 fsdir.T) *cli.Subcmd {
 				break
 			}
 		}
+
+		if val_type != "list" && fs.NArg() > 2 {
+			r.Usage()
+		}
+
 		if val_type == "list" && len(vals) > 0 {
 			if vals[0] == "null" {
 				val = vals[0]
