@@ -11,6 +11,7 @@ This repository is for the Wireleap client.
 ## Table of contents
 
 - [Installation](#installation)
+    - [Shell completion](#shell-completion)
 - [Configuration](#configuration)
 - [Accesskeys](#accesskeys)
 - [Circuit](#circuit)
@@ -54,6 +55,16 @@ perform manual verification and installation, or [build from
 source](#building).
 
 [releases]: https://github.com/wireleap/client/releases
+
+### Shell completion
+
+Bash completion is available for all `wireleap` commands, sub-commands,
+option flags, as well as `exec` and `config circuit.whitelist`. Add the
+following line to your `$HOME/.bashrc` or similar location.
+
+```shell
+[ -e "$HOME/wireleap/completion.bash" ] && source $HOME/wireleap/completion.bash
+```
 
 ## Configuration
 
