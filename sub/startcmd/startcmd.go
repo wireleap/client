@@ -216,6 +216,8 @@ func Cmd() *cli.Subcmd {
 				mu.Lock()
 				defer mu.Unlock()
 				// reload config
+
+				c = clientcfg.Defaults()
 				err = fm.Get(&c, filenames.Config)
 				if err != nil {
 					log.Printf(
