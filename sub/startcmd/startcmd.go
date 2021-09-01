@@ -154,6 +154,8 @@ func Cmd() *cli.Subcmd {
 				if skipv != nil && skipv.EQ(v) {
 					log.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
 					log.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
+				} else if v.Minor == version.VERSION.Minor && len(version.VERSION.Pre) > 0 {
+					log.Printf("Current version %s is pre-release and %s is available, please consider upgrading.", version.VERSION, v)
 				} else {
 					log.Fatalf(
 						"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
