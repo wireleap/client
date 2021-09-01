@@ -60,6 +60,12 @@ func Cmd() (r *cli.Subcmd) {
 		switch cmd {
 		case "start":
 			fi, err := os.Stat(binpath)
+			if stat, ok := fi.Sys().(*syscall.Stat_t); ok && stat.Uid != 0 {
+				log.Fatalf(
+					"could not execute %s: file is not owned by root (did you `chown root:root %s && chmod u+s %s`?)",
+					binpath, binpath, binpath,
+				)
+			}
 			switch {
 			case err != nil:
 				log.Fatalf("could not stat %s: %s", binpath, err)
@@ -67,9 +73,6 @@ func Cmd() (r *cli.Subcmd) {
 				log.Fatalf("could not execute %s: file is not executable (did you `chmod +x %s`?)", binpath, binpath)
 			case fi.Mode()&os.ModeSetuid == 0:
 				log.Fatalf("could not execute %s: file is not setuid (did you `chmod u+s %s`?)", binpath, binpath)
-			}
-			if stat, ok := fi.Sys().(*syscall.Stat_t); ok && stat.Uid != 0 {
-				log.Fatalf("could not execute %s: file is not owned by root (did you `chown root:root %s`?)", binpath, binpath)
 			}
 			if err = fm.Get(&pid, filenames.Pid); err != nil {
 				log.Fatalf("it appears wireleap is not running: could not get wireleap PID from %s: %s", fm.Path(filenames.Pid), err)
