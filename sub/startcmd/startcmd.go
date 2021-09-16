@@ -32,6 +32,7 @@ import (
 	"github.com/wireleap/common/cli/commonsub/startcmd"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
+	"github.com/wireleap/common/wlnet"
 	"github.com/wireleap/common/wlnet/transport"
 )
 
@@ -63,11 +64,11 @@ func Cmd() *cli.Subcmd {
 		// force target protocol if needed
 		tproto, ok := os.LookupEnv("WIRELEAP_TARGET_PROTOCOL")
 		if ok {
-			dialf = func(proto string, remote *url.URL) (net.Conn, error) {
+			dialf = func(c net.Conn, proto string, remote *url.URL, p *wlnet.Init) (net.Conn, error) {
 				if remote.Scheme == "target" {
 					proto = tproto
 				}
-				return dialf(proto, remote)
+				return dialf(c, proto, remote, p)
 			}
 		}
 		// write bypass
@@ -167,8 +168,12 @@ func Cmd() *cli.Subcmd {
 		// set up local listening functions
 		var (
 			listening = []string{}
-			dialer    = clientlib.CircuitDialer(clientlib.AlwaysFetch(sks), circuitf, dialf)
-			errf      = func(e error) {
+			dialer    = clientlib.CircuitDialer(
+				clientlib.AlwaysFetch(sks),
+				circuitf,
+				dialf,
+			)
+			errf = func(e error) {
 				if err != nil {
 					if o := clientlib.TraceOrigin(err, circ); o != nil {
 						if status.IsCircuitError(err) {
