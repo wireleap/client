@@ -35,37 +35,32 @@ func CircuitDialer(
 			return
 		}
 		var st *sharetoken.T
-		for i, link := range circuit {
+		for _, link := range circuit {
 			log.Println(
 				"Connecting to circuit link:",
 				link.Role,
 				link.Addr.String(),
 				link.Pubkey.String(),
 			)
-			switch i {
-			case 0:
-				continue
-			default:
-				st, err = sharetoken.New(sk, circuit[i-1].Pubkey.T())
-				if err != nil {
-					return
+			st, err = sharetoken.New(sk, link.Pubkey.T())
+			if err != nil {
+				return
+			}
+			c, err = dialf(c, "tcp", &link.Addr.URL, &wlnet.Init{
+				Command:  "CONNECT",
+				Protocol: "tcp",
+				Remote:   link.Addr,
+				Token:    st,
+				Version:  &clientrelay.T.Version,
+			})
+			if err != nil {
+				// return circuit-specific error
+				err = &status.T{
+					Code:   http.StatusBadGateway,
+					Desc:   err.Error(),
+					Origin: link.Pubkey.String(),
 				}
-				c, err = dialf(c, "tcp", &link.Addr.URL, &wlnet.Init{
-					Command:  "CONNECT",
-					Protocol: "tcp",
-					Remote:   link.Addr,
-					Token:    st,
-					Version:  &clientrelay.T.Version,
-				})
-				if err != nil {
-					// return circuit-specific error
-					err = &status.T{
-						Code:   http.StatusBadGateway,
-						Desc:   err.Error(),
-						Origin: link.Pubkey.String(),
-					}
-					return
-				}
+				return
 			}
 		}
 		log.Printf("Now connecting to target: %s", target)
@@ -84,9 +79,6 @@ func CircuitDialer(
 			Token:    st,
 			Version:  &clientrelay.T.Version,
 		})
-		if err != nil {
-			return
-		}
 		return
 	}
 }
