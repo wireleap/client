@@ -87,7 +87,6 @@ func CircuitDialer(
 		if err != nil {
 			return
 		}
-		c = &wlnet.FragReadConn{Conn: c}
 		return
 	}
 }
