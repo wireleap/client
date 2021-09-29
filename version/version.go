@@ -30,8 +30,11 @@ var VERSION_STRING = GITREV
 // VERSION is the semver version struct of VERSION_STRING.
 var VERSION = semver.MustParse(VERSION_STRING)
 
+// Hardcoded component value for wireleap client.
+const Component = "client"
+
 // Hardcoded (for now) channel value for wireleap client.
-const Channel = "client"
+const Channel = "default"
 
 // Post-upgrade hook for superviseupgradecmd.
 func PostUpgradeHook(f fsdir.T) (err error) {
@@ -109,9 +112,9 @@ func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
 	if err != nil {
 		return
 	}
-	v, ok := dinfo.Channels[Channel]
+	v, ok := dinfo.UpgradeChannels[Component][Channel]
 	if !ok {
-		err = fmt.Errorf("no version for channel '%s' is provided by directory", Channel)
+		err = fmt.Errorf("no version for client channel 'default' is provided by directory")
 		return
 	}
 	return v, nil

@@ -148,8 +148,8 @@ func Cmd() *cli.Subcmd {
 		}
 		sks := clientlib.SKSource(fm, &c, cl)
 		// maybe there's an upgrade available?
-		if di.Channels != nil {
-			if v, ok := di.Channels[version.Channel]; ok && v.GT(version.VERSION) {
+		if di.UpgradeChannels != nil && di.UpgradeChannels[version.Component] != nil {
+			if v, ok := di.UpgradeChannels[version.Component][version.Channel]; ok && v.GT(version.VERSION) {
 				skipv := upgrade.NewConfig(fm, "wireleap", false).SkippedVersion()
 				if skipv != nil && skipv.EQ(v) {
 					log.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
