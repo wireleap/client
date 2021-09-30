@@ -35,18 +35,21 @@ func CircuitDialer(
 			return
 		}
 		var st *sharetoken.T
-		for _, link := range circuit {
+		for i, link := range circuit {
 			log.Println(
 				"Connecting to circuit link:",
 				link.Role,
 				link.Addr.String(),
 				link.Pubkey.String(),
 			)
-			st, err = sharetoken.New(sk, link.Pubkey.T())
+			if i == 0 {
+				continue
+			}
+			st, err = sharetoken.New(sk, circuit[i-1].Pubkey.T())
 			if err != nil {
 				return
 			}
-			c, err = dialf(c, "tcp", &link.Addr.URL, &wlnet.Init{
+			c, err = dialf(c, "tcp", &circuit[i-1].Addr.URL, &wlnet.Init{
 				Command:  "CONNECT",
 				Protocol: "tcp",
 				Remote:   link.Addr,
