@@ -21,7 +21,7 @@ type T []*relayentry.T
 func (t T) Partition() (fronting T, entropic T, backing T) {
 	for _, r := range t {
 		// exclude incompatible versions
-		if r.Versions.ClientRelay.Minor != clientrelay.T.Version.Minor {
+		if r.Versions.ClientRelay != nil && r.Versions.ClientRelay.Minor != clientrelay.T.Version.Minor {
 			continue
 		}
 
