@@ -5,7 +5,6 @@ package main
 import (
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -14,7 +13,7 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/vishvananda/netlink"
+	"github.com/wireleap/client/wireleap_tun/netsetup"
 	"github.com/wireleap/client/wireleap_tun/tun"
 
 	"net/http"
@@ -39,10 +38,6 @@ func main() {
 	if err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
 		log.Fatalf("could not set RLIMIT_NOFILE to %+v", rlim)
 	}
-	routes, err := getroutes(sh)
-	if err != nil {
-		log.Fatalf("could not get routes: %s", err)
-	}
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatalf("could not set up file watcher: %s", err)
@@ -52,58 +47,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not add bypass.json to file watcher: %s", err)
 	}
-
-	link, err := netlink.LinkByName(t.Name())
-	if err != nil {
-		log.Fatalf("could not get link for %s: %s", t.Name(), err)
+	if err = netsetup.Init(t, tunaddr); err != nil {
+		log.Fatalf("could not configure tun device %s as %s: %s", t.Name(), tunaddr, err)
 	}
-	err = netlink.LinkSetTxQLen(link, 1000)
+	rts, err := netsetup.RoutesUp(sh)
 	if err != nil {
-		log.Fatalf("could not set link txqueue length for %s to %d: %s", t.Name(), 1000, err)
-	}
-	err = netlink.LinkSetUp(link)
-	if err != nil {
-		log.Fatalf("could not set %s up: %s", link, err)
-	}
-	tunhost, _, err := net.SplitHostPort(tunaddr)
-	if err != nil {
-		log.Fatalf("could not parse WIRELEAP_ADDR_TUN `%s`: %s", tunaddr, err)
-	}
-	addr, err := netlink.ParseAddr(tunhost + "/31")
-	if err != nil {
-		log.Fatalf("could not parse address of %s: %s", tunaddr, err)
-	}
-	err = netlink.AddrAdd(link, addr)
-	if err != nil {
-		log.Fatalf("could not set address of %s to %s: %s", link, addr, err)
-	}
-	// avoid clobbering the default route by being just a _little_ bit more specific
-	for _, r := range append([]netlink.Route{{
-		// lower half of all v4 addresses
-		LinkIndex: link.Attrs().Index,
-		Dst:       &net.IPNet{IP: net.IPv4(0, 0, 0, 0), Mask: net.CIDRMask(1, net.IPv4len*8)},
-	}, {
-		// upper half of all v4 addresses
-		LinkIndex: link.Attrs().Index,
-		Dst:       &net.IPNet{IP: net.IPv4(128, 0, 0, 0), Mask: net.CIDRMask(1, net.IPv4len*8)},
-	}, {
-		// v6 global-adressable range
-		LinkIndex: link.Attrs().Index,
-		Dst:       &net.IPNet{IP: net.ParseIP("2000::"), Mask: net.CIDRMask(3, net.IPv6len*8)},
-	}}, routes...) {
-		log.Printf("adding route: %+v", r)
-		if err = netlink.RouteReplace(&r); err != nil {
-			log.Fatalf("could not add route to %s: %s", r.Dst, err)
-		}
-		log.Printf("added route to %s via %s", r.Dst, r.Gw)
+		log.Fatalf("could not configure routes to tun device %s: %s", t.Name(), err)
 	}
 	pidfile := path.Join(sh, "wireleap_tun.pid")
 	finalize := func() {
 		// don't need to delete catch-all routes via tun dev as they will be
 		// removed when the device is down
-		for _, r := range routes {
-			netlink.RouteDel(&r)
-		}
+		rts.Down()
 		os.Remove(pidfile)
 	}
 	defer finalize()
@@ -117,7 +72,6 @@ func main() {
 		log.Fatalf("could not write pidfile %s: %s", pidfile, err)
 	}
 	defer os.Remove(pidfile)
-
 	// setup debugging & profiling
 	if os.Getenv("WIRELEAP_TUN_DEBUG") != "" {
 		DEBUG = true
@@ -151,20 +105,12 @@ func main() {
 			if !ok {
 				return
 			}
-			routes2, err := getroutes(sh)
-			if err != nil {
-				log.Fatal(err)
+			if err = rts.Down(); err != nil {
+				log.Printf("error while bringing down old routes: %s", err)
 			}
-			for _, r := range routes {
-				netlink.RouteDel(&r)
+			if rts, err = netsetup.RoutesUp(sh); err != nil {
+				log.Fatalf("could not set new routes: %s", err)
 			}
-			for _, r := range routes2 {
-				err = netlink.RouteReplace(&r)
-				if err != nil {
-					log.Fatalf("could not remove route %s: %s", r, err)
-				}
-			}
-			routes = routes2
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
