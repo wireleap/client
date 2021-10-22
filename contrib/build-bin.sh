@@ -33,7 +33,9 @@ if [ "$GOOS" = 'linux' ]; then
     make -C "$SRCDIR/wireleap_intercept"
     cp "$SRCDIR/wireleap_intercept/wireleap_intercept.so" "$SRCDIR/sub/initcmd/embedded"
     make -C "$SRCDIR/wireleap_intercept" clean
+fi
 
+if [ "$GOOS" = 'linux' ] || [ "$GOOS" = 'darwin' ]; then
     info "building wireleap_tun"
     cd "$SRCDIR/wireleap_tun"
     go get -v -d ./...
