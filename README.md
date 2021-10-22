@@ -324,7 +324,7 @@ bit`. Alternatively, `wireleap tun` commands can be run with `sudo` or
 
 ```shell
 # set suid bit
-sudo chown root:root $HOME/wireleap/wireleap_tun
+sudo chown 0:0 $HOME/wireleap/wireleap_tun
 sudo chmod u+s $HOME/wireleap/wireleap_tun
 ```
 

@@ -62,7 +62,7 @@ func Cmd() (r *cli.Subcmd) {
 			fi, err := os.Stat(binpath)
 			if stat, ok := fi.Sys().(*syscall.Stat_t); ok && stat.Uid != 0 {
 				log.Fatalf(
-					"could not execute %s: file is not owned by root (did you `chown root:root %s && chmod u+s %s`?)",
+					"could not execute %s: file is not owned by root (did you `chown 0:0 %s && chmod u+s %s`?)",
 					binpath, binpath, binpath,
 				)
 			}
