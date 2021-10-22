@@ -201,7 +201,7 @@ main() {
     if [ -e "$binarydir/wireleap_tun" ]; then
         echo
         echo "To enable TUN support, execute the following commands:"
-        echo "  $ sudo chown root:root $binarydir/wireleap_tun"
+        echo "  $ sudo chown 0:0 $binarydir/wireleap_tun"
         echo "  $ sudo chmod u+s $binarydir/wireleap_tun"
     fi
 
