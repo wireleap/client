@@ -4,5 +4,5 @@ package embedded
 
 import "embed"
 
-//go:embed scripts LICENSE
+//go:embed wireleap_tun scripts LICENSE
 var FS embed.FS
