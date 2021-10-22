@@ -128,7 +128,7 @@ func Init(t *tun.T, tunaddr string) error {
 		return fmt.Errorf("could not parse WIRELEAP_ADDR_TUN `%s`: %s", tunaddr, err)
 	}
 	// FIXME unhardcode 2nd peer address
-	if err = exec.Command("ifconfig", t.Name(), tunhost, "10.13.49.1").Run(); err != nil {
+	if err = exec.Command("ifconfig", t.Name(), tunhost, "10.13.49.1", "netmask", "0xffffffff").Run(); err != nil {
 		return fmt.Errorf("tun device %s configuration failed: %s", t.Name(), err)
 	}
 	return sockwrite(mkrms(syscall.RTM_ADD, [][]route.Addr{
