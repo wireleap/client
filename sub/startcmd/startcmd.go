@@ -85,11 +85,35 @@ func Cmd() *cli.Subcmd {
 			if c.Contract == nil {
 				return fmt.Errorf("contract is not defined")
 			}
-			if ci, rl, err = clientlib.GetContractInfo(cl, c.Contract); err != nil {
-				return fmt.Errorf("could not get contract info: %w", err)
+			if ci, err = consume.ContractInfo(cl, c.Contract); err != nil {
+				return fmt.Errorf(
+					"could not get contract info for %s: %s",
+					c.Contract.String(), err,
+				)
 			}
 			if di, err = consume.DirectoryInfo(cl, c.Contract); err != nil {
 				return fmt.Errorf("could not get contract directory info: %w", err)
+			}
+			// maybe there's an upgrade available?
+			if di.Channels != nil {
+				if v, ok := di.Channels[version.Channel]; ok && v.GT(version.VERSION) {
+					skipv := upgrade.NewConfig(fm, "wireleap", false).SkippedVersion()
+					if skipv != nil && skipv.EQ(v) {
+						log.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
+						log.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
+					} else {
+						log.Fatalf(
+							"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
+							v, version.VERSION,
+						)
+					}
+				}
+			}
+			if rl, err = consume.ContractRelays(cl, c.Contract); err != nil {
+				return fmt.Errorf(
+					"could not get contract relays for %s: %s",
+					c.Contract.String(), err,
+				)
 			}
 			if err = clientlib.SaveContractInfo(fm, ci, rl); err != nil {
 				return fmt.Errorf("could not save contract info: %w", err)
@@ -148,23 +172,6 @@ func Cmd() *cli.Subcmd {
 			return
 		}
 		sks := clientlib.SKSource(fm, &c, cl)
-		// maybe there's an upgrade available?
-		if di.UpgradeChannels.Client != nil {
-			if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
-				skipv := upgrade.NewConfig(fm, "wireleap", false).SkippedVersion()
-				if skipv != nil && skipv.EQ(v) {
-					log.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
-					log.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
-				} else if v.Minor == version.VERSION.Minor && len(version.VERSION.Pre) > 0 {
-					log.Printf("Current version %s is pre-release and %s is available, please consider upgrading.", version.VERSION, v)
-				} else {
-					log.Fatalf(
-						"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
-						v, version.VERSION,
-					)
-				}
-			}
-		}
 		// set up local listening functions
 		var (
 			listening = []string{}
