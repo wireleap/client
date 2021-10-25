@@ -20,8 +20,8 @@ type T []*relayentry.T
 // is incompatible with this wireleap.
 func (t T) Partition() (fronting T, entropic T, backing T) {
 	for _, r := range t {
-		// exclude incompatible versions
-		if r.Versions.ClientRelay != nil && r.Versions.ClientRelay.Minor != clientrelay.T.Version.Minor {
+		// exclude older protocol & incompatible relays
+		if r.Versions.ClientRelay == nil || r.Versions.ClientRelay.Minor != clientrelay.T.Version.Minor {
 			continue
 		}
 
