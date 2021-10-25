@@ -44,7 +44,7 @@ func mkrms(t int, rts [][]route.Addr) (r []route.RouteMessage) {
 			Version: syscall.RTM_VERSION,
 			Seq:     i,
 			Type:    t,
-			Flags:   syscall.RTF_STATIC | syscall.RTF_UP,
+			Flags:   syscall.RTF_STATIC | syscall.RTF_UP | syscall.RTF_GATEWAY,
 			ID:      uintptr(os.Getpid()),
 			Addrs:   addrs,
 		})
@@ -79,12 +79,9 @@ func mkroutes(ips []net.IP) (routes []route.RouteMessage, err error) {
 				switch a := m.Addrs[syscall.RTAX_DST].(type) {
 				case *route.Inet4Addr:
 					dst = net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3])
-				case *route.Inet6Addr:
-					dst = make(net.IP, net.IPv6len)
-					copy(dst, a.IP[:])
 				}
 
-				if !(dst.Equal(net.IPv4zero) || dst.Equal(net.IPv6zero)) {
+				if !dst.Equal(net.IPv4zero) {
 					// not default route
 					continue
 				}
@@ -93,15 +90,12 @@ func mkroutes(ips []net.IP) (routes []route.RouteMessage, err error) {
 				case *route.Inet4Addr:
 					gwaddr = a
 					gw = net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3])
-				case *route.Inet6Addr:
-					gwaddr = a
-					gw = make(net.IP, net.IPv6len)
-					copy(gw, a.IP[:])
 				default:
 					continue
 				}
 
-				log.Printf("found default route dst = %s, gw = %s", dst, gw)
+				log.Printf("found default v4 route dst = %s, gw = %s", dst, gw)
+				break
 			}
 		}
 		if gwaddr == nil || dst == nil || gw == nil {
@@ -110,9 +104,13 @@ func mkroutes(ips []net.IP) (routes []route.RouteMessage, err error) {
 		// route bypass ips as default route using default gateway
 		var addrs [][]route.Addr
 		for _, ip := range ips {
-			// TODO FIXME ipv6?
+			ip4 := ip.To4()
+			if ip4 == nil {
+				// TODO FIXME ipv6?
+				continue
+			}
 			addrs = append(addrs, []route.Addr{
-				syscall.RTAX_DST:     &route.Inet4Addr{IP: [4]byte{ip[0], ip[1], ip[3], ip[4]}},
+				syscall.RTAX_DST:     &route.Inet4Addr{IP: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]}},
 				syscall.RTAX_NETMASK: &route.Inet4Addr{IP: [4]byte{255, 255, 255, 255}},
 				syscall.RTAX_GATEWAY: gwaddr,
 			})
