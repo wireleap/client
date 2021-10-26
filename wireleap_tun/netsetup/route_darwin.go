@@ -13,6 +13,7 @@ import (
 
 	"github.com/wireleap/client/wireleap_tun/tun"
 	"golang.org/x/net/route"
+	"golang.org/x/sys/unix"
 )
 
 func sockwrite(rms []route.RouteMessage) error {
@@ -44,9 +45,12 @@ func mkrms(t int, rts [][]route.Addr) (r []route.RouteMessage) {
 			Version: syscall.RTM_VERSION,
 			Seq:     i,
 			Type:    t,
-			Flags:   syscall.RTF_STATIC | syscall.RTF_UP | syscall.RTF_GATEWAY,
-			ID:      uintptr(os.Getpid()),
-			Addrs:   addrs,
+			Flags: syscall.RTF_STATIC |
+				syscall.RTF_UP |
+				syscall.RTF_GATEWAY |
+				unix.RTF_GLOBAL,
+			ID:    uintptr(os.Getpid()),
+			Addrs: addrs,
 		})
 	}
 	return
