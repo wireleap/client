@@ -56,68 +56,96 @@ func mkrms(t int, rts [][]route.Addr) (r []route.RouteMessage) {
 	return
 }
 
-// mkroutes returns the routes we need for wireleap to function (contract,
-// directory, fronting relay).
-// NOTE: routes returned by filter can be duplicate. therefore, when iterating
-// do not add but replace
-func mkroutes(ips []net.IP) (routes []route.RouteMessage, err error) {
-	for _, ip := range ips {
-		if ip.IsLoopback() || ip.IsUnspecified() || ip.To4() == nil {
-			// don't need routes for these... TODO FIXME ipv6
-			continue
-		}
-		// get default route(s)
-		rib, err := route.FetchRIB(syscall.AF_UNSPEC, route.RIBTypeRoute, 0)
-		if err != nil {
-			log.Fatal(err)
-		}
-		msgs, err := route.ParseRIB(route.RIBTypeRoute, rib)
-		if err != nil {
-			log.Fatal(err)
-		}
-		var gwaddr route.Addr
-		var dst, gw net.IP
-		for _, m := range msgs {
-			switch m := m.(type) {
-			case *route.RouteMessage:
-				switch a := m.Addrs[syscall.RTAX_DST].(type) {
-				case *route.Inet4Addr:
-					dst = net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3])
-				}
-
-				if !dst.Equal(net.IPv4zero) {
+func getgws() (gw4 route.Addr, gw6 route.Addr, err error) {
+	// get default route(s)
+	rib, err := route.FetchRIB(syscall.AF_UNSPEC, route.RIBTypeRoute, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	msgs, err := route.ParseRIB(route.RIBTypeRoute, rib)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, m := range msgs {
+		switch m := m.(type) {
+		case *route.RouteMessage:
+			// looking for a destination of all zeroes (default route sign)
+			switch a := m.Addrs[syscall.RTAX_DST].(type) {
+			case *route.Inet4Addr:
+				if !net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3]).Equal(net.IPv4zero) {
 					// not default route
 					continue
 				}
-
-				switch a := m.Addrs[syscall.RTAX_GATEWAY].(type) {
-				case *route.Inet4Addr:
-					gwaddr = a
-					gw = net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3])
-				default:
+			case *route.Inet6Addr:
+				if !net.IP(a.IP[:]).Equal(net.IPv6zero) {
+					// not default route
 					continue
 				}
+			default:
+				continue
+			}
 
-				log.Printf("found default v4 route dst = %s, gw = %s", dst, gw)
-				break
+			// getting the gateway to use for v4/v6 bypass routes
+			switch a := m.Addrs[syscall.RTAX_GATEWAY].(type) {
+			case *route.Inet4Addr:
+				if gw4 != nil {
+					// already have one
+					continue
+				}
+				gw4 = a
+				log.Printf("found default v4 route, gateway %s", net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3]))
+			case *route.Inet6Addr:
+				if gw6 != nil {
+					// already have one
+					continue
+				}
+				gw6 = a
+				log.Printf("found default v6 route, gateway %s", net.IP(a.IP[:]))
+			default:
+				continue
 			}
 		}
-		if gwaddr == nil || dst == nil || gw == nil {
-			return nil, fmt.Errorf("could not obtain default route")
+	}
+	if gw4 == nil && gw6 == nil {
+		return nil, nil, fmt.Errorf("could not obtain any default v4/v6 gateways")
+	}
+	return
+}
+
+// mkroutes returns the routes we need for wireleap to function (contract,
+// directory, fronting relay).
+func mkroutes(ips []net.IP) (routes []route.RouteMessage, err error) {
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsUnspecified() {
+			// don't need routes for these...
+			continue
+		}
+		gw4, gw6, err := getgws()
+		if err != nil {
+			return nil, err
 		}
 		// route bypass ips as default route using default gateway
 		var addrs [][]route.Addr
 		for _, ip := range ips {
-			ip4 := ip.To4()
-			if ip4 == nil {
-				// TODO FIXME ipv6?
-				continue
+			if ip4 := ip.To4(); ip4 != nil && gw4 != nil {
+				// v4
+				addrs = append(addrs, []route.Addr{
+					syscall.RTAX_DST:     &route.Inet4Addr{IP: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]}},
+					syscall.RTAX_NETMASK: &route.Inet4Addr{IP: [4]byte{255, 255, 255, 255}},
+					syscall.RTAX_GATEWAY: gw4,
+				})
+			} else if gw6 != nil {
+				// v6
+				// TODO go 1.17:
+				// use https://tip.golang.org/ref/spec#Conversions_from_slice_to_array_pointer
+				ip6 := [16]byte{}
+				copy(ip6[:], ip)
+				addrs = append(addrs, []route.Addr{
+					syscall.RTAX_DST:     &route.Inet6Addr{IP: ip6},
+					syscall.RTAX_NETMASK: &route.Inet4Addr{IP: [4]byte{255, 255, 255, 255}},
+					syscall.RTAX_GATEWAY: gw6,
+				})
 			}
-			addrs = append(addrs, []route.Addr{
-				syscall.RTAX_DST:     &route.Inet4Addr{IP: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]}},
-				syscall.RTAX_NETMASK: &route.Inet4Addr{IP: [4]byte{255, 255, 255, 255}},
-				syscall.RTAX_GATEWAY: gwaddr,
-			})
 		}
 		routes = mkrms(syscall.RTM_ADD, addrs)
 	}
@@ -133,26 +161,33 @@ func Init(t *tun.T, tunaddr string) error {
 	if err = exec.Command("ifconfig", t.Name(), tunhost, "10.13.49.1", "netmask", "0xffffffff").Run(); err != nil {
 		return fmt.Errorf("tun device %s configuration failed: %s", t.Name(), err)
 	}
-	return sockwrite(mkrms(syscall.RTM_ADD, [][]route.Addr{
-		{
+	gw4, gw6, err := getgws()
+	if err != nil {
+		return err
+	}
+	var addrs [][]route.Addr
+	if gw4 != nil {
+		addrs = append(addrs, []route.Addr{
 			// lower half of all ipv4 addresses
 			syscall.RTAX_DST:     &route.Inet4Addr{IP: [4]byte{}},       // 0.0.0.0
 			syscall.RTAX_NETMASK: &route.Inet4Addr{IP: [4]byte{128}},    // /1
 			syscall.RTAX_GATEWAY: &route.LinkAddr{Index: t.NetIf.Index}, // via utunX
-		},
-		{
+		}, []route.Addr{
 			// upper half of all ipv4 addresses
 			syscall.RTAX_DST:     &route.Inet4Addr{IP: [4]byte{128}},    // 128.0.0.0
 			syscall.RTAX_NETMASK: &route.Inet4Addr{IP: [4]byte{128}},    // /1
 			syscall.RTAX_GATEWAY: &route.LinkAddr{Index: t.NetIf.Index}, // via utunX
-		},
-		{
+		})
+	}
+	if gw6 != nil {
+		addrs = append(addrs, []route.Addr{
 			// global-adressable ipv6
 			syscall.RTAX_DST:     &route.Inet6Addr{IP: [16]byte{32}},    // 2000::
 			syscall.RTAX_NETMASK: &route.Inet6Addr{IP: [16]byte{224}},   // /3
 			syscall.RTAX_GATEWAY: &route.LinkAddr{Index: t.NetIf.Index}, // via utunX
-		},
-	}))
+		})
+	}
+	return sockwrite(mkrms(syscall.RTM_ADD, addrs))
 }
 
 type darwinRoutes struct{ rts []route.RouteMessage }
