@@ -92,15 +92,25 @@ func getgws() (gw4 route.Addr, gw6 route.Addr, err error) {
 					// already have one
 					continue
 				}
+				if ip := net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3]); ip.IsLinkLocalUnicast() {
+					// skip link-local gateways present on darwin
+					continue
+				} else {
+					log.Printf("found default v4 route, gateway %s", ip)
+				}
 				gw4 = a
-				log.Printf("found default v4 route, gateway %s", net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3]))
 			case *route.Inet6Addr:
 				if gw6 != nil {
 					// already have one
 					continue
 				}
+				if ip := net.IP(a.IP[:]); ip.IsLinkLocalUnicast() {
+					// skip link-local gateways present on darwin
+					continue
+				} else {
+					log.Printf("found default v6 route, gateway %s", ip)
+				}
 				gw6 = a
-				log.Printf("found default v6 route, gateway %s", net.IP(a.IP[:]))
 			default:
 				continue
 			}
