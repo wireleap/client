@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func sockwrite(rms []route.RouteMessage) error {
+func sockwrite(rms []*route.RouteMessage) error {
 	fd, err := syscall.Socket(syscall.AF_ROUTE, syscall.SOCK_RAW, syscall.AF_UNSPEC)
 	if err != nil {
 		return fmt.Errorf("could not create raw routing socket: %s", err)
@@ -76,9 +76,9 @@ func sockwrite(rms []route.RouteMessage) error {
 	return nil
 }
 
-func mkrms(t int, rts [][]route.Addr) (r []route.RouteMessage) {
+func mkrms(t int, rts [][]route.Addr) (r []*route.RouteMessage) {
 	for i, addrs := range rts {
-		r = append(r, route.RouteMessage{
+		r = append(r, &route.RouteMessage{
 			Version: syscall.RTM_VERSION,
 			Seq:     i,
 			Type:    t,
@@ -161,7 +161,7 @@ func getgws() (gw4 route.Addr, gw6 route.Addr, err error) {
 
 // mkroutes returns the routes we need for wireleap to function (contract,
 // directory, fronting relay).
-func mkroutes(ips []net.IP) (routes []route.RouteMessage, err error) {
+func mkroutes(ips []net.IP) (routes []*route.RouteMessage, err error) {
 	for _, ip := range ips {
 		if ip.IsLoopback() || ip.IsUnspecified() {
 			// don't need routes for these...
@@ -237,7 +237,7 @@ func Init(t *tun.T, tunaddr string) error {
 	return sockwrite(mkrms(syscall.RTM_ADD, addrs))
 }
 
-type darwinRoutes struct{ rts []route.RouteMessage }
+type darwinRoutes struct{ rts []*route.RouteMessage }
 
 func RoutesUp(sh string) (Routes, error) {
 	log.Printf("bringing up bypass routes...")
