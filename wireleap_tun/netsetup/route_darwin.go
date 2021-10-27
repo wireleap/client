@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 
 	"github.com/wireleap/client/wireleap_tun/tun"
@@ -23,6 +24,42 @@ func sockwrite(rms []route.RouteMessage) error {
 	}
 	defer syscall.Close(fd)
 	for _, rm := range rms {
+		// generate human-readable debug output
+		o := []string{"writing route message:"}
+		switch rm.Type {
+		case syscall.RTM_ADD:
+			o = append(o, "add")
+		case syscall.RTM_DELETE:
+			o = append(o, "delete")
+		}
+		if aa := rm.Addrs[syscall.RTAX_DST]; aa != nil {
+			o = append(o, "dst")
+			switch a := aa.(type) {
+			case *route.Inet4Addr:
+				o = append(o, "v4", net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3]).String())
+			case *route.Inet6Addr:
+				o = append(o, "v6", net.IP(a.IP[:]).String())
+			case *route.LinkAddr:
+				o = append(o, "link#"+strconv.Itoa(a.Index))
+			default:
+				o = append(o, "<weirdness>")
+			}
+		}
+		if aa := rm.Addrs[syscall.RTAX_GATEWAY]; aa != nil {
+			o = append(o, "gw")
+			switch a := aa.(type) {
+			case *route.Inet4Addr:
+				o = append(o, "v4", net.IPv4(a.IP[0], a.IP[1], a.IP[2], a.IP[3]).String())
+			case *route.Inet6Addr:
+				o = append(o, "v6", net.IP(a.IP[:]).String())
+			case *route.LinkAddr:
+				o = append(o, "link#"+strconv.Itoa(a.Index))
+			default:
+				o = append(o, "<weirdness>")
+			}
+		}
+		log.Println(o)
+
 		b, err := rm.Marshal()
 		if err != nil {
 			return fmt.Errorf("could not marshal routemessage %+v: %s", rm, err)
@@ -203,6 +240,7 @@ func Init(t *tun.T, tunaddr string) error {
 type darwinRoutes struct{ rts []route.RouteMessage }
 
 func RoutesUp(sh string) (Routes, error) {
+	log.Printf("bringing up bypass routes...")
 	ips, err := ReadBypass(sh)
 	if err != nil {
 		return nil, fmt.Errorf("could not read bypass file: %s", err)
@@ -218,6 +256,7 @@ func RoutesUp(sh string) (Routes, error) {
 }
 
 func (t darwinRoutes) Down() error {
+	log.Printf("bringing down bypass routes...")
 	for _, rt := range t.rts {
 		// mutate in place, this struct is being discarded anyway
 		rt.Type = syscall.RTM_DELETE
