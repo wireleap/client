@@ -204,8 +204,11 @@ func Init(t *tun.T, tunaddr string) error {
 	if err != nil {
 		return fmt.Errorf("could not parse WIRELEAP_ADDR_TUN `%s`: %s", tunaddr, err)
 	}
-	// FIXME unhardcode 2nd peer address
-	if err = exec.Command("ifconfig", t.Name(), tunhost, "10.13.49.1", "netmask", "0xffffffff").Run(); err != nil {
+	ip, _, err := net.ParseCIDR(tunhost + "/31")
+	if err != nil {
+		return fmt.Errorf("could not parse WIRELEAP_ADDR_TUN subnet `%s`: %s", tunhost+"/31", err)
+	}
+	if err = exec.Command("ifconfig", t.Name(), tunhost, NextIP(ip).String(), "netmask", "0xffffffff").Run(); err != nil {
 		return fmt.Errorf("tun device %s configuration failed: %s", t.Name(), err)
 	}
 	gw4, gw6, err := getgws()
