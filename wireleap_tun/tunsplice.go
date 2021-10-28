@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/wireleap/client/wireleap_tun/netsetup"
 	"github.com/wireleap/client/wireleap_tun/ptable"
 	"github.com/wireleap/client/wireleap_tun/tun"
 	"github.com/wireleap/common/wlnet/h2conn"
@@ -63,21 +64,6 @@ func tcpfwd(l *net.TCPListener) {
 		c.SetKeepAlive(false)
 		go spliceconn(c)
 	}
-}
-
-// copyip copies an IP.
-func copyip(i1 net.IP) (i2 net.IP) {
-	i2 = make([]byte, len(i1))
-	copy(i2, i1)
-	return
-}
-
-// nextip returns a new IP from the passed one with the last octet incremented
-// by 1. Normally, this should be its /31 "neighbor".
-func nextip(i1 net.IP) (i2 net.IP) {
-	i2 = copyip(i1)
-	i2[len(i2)-1]++
-	return
 }
 
 // listenDual sets up TCP listening sockets for IPv4 and IPv6 and return the
@@ -188,8 +174,8 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 					if nat := pt.Get(ptable.TCP, int(tcp.DstPort)); nat != nil {
 						// redirect to client
 						var (
-							newsrc = copyip(nat.DstIP)
-							newdst = copyip(tunaddr.IP)
+							newsrc = netsetup.CopyIP(nat.DstIP)
+							newdst = netsetup.CopyIP(tunaddr.IP)
 						)
 						if (newsrc.To4() == nil) != (newdst.To4() == nil) {
 							log.Printf(
@@ -219,8 +205,8 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 							tcp.TransportFlow().Dst().String(),
 						)
 						pt.Set(ptable.TCP, natport, &ptable.Entry{
-							SrcIP:   copyip(*srcip),
-							DstIP:   copyip(*dstip),
+							SrcIP:   netsetup.CopyIP(*srcip),
+							DstIP:   netsetup.CopyIP(*dstip),
 							SrcPort: natport,
 							DstPort: int(tcp.DstPort),
 						}, func() (c net.Conn, err error) {
@@ -230,8 +216,8 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 							return
 						})
 					}
-					*srcip = nextip(tunaddr.IP)
-					*dstip = copyip(tunaddr.IP)
+					*srcip = netsetup.NextIP(tunaddr.IP)
+					*dstip = netsetup.CopyIP(tunaddr.IP)
 					tcp.DstPort = layers.TCPPort(tunaddr.Port)
 				}
 				err = gopacket.SerializeLayers(buf, opts, ipl, &tcp, gopacket.Payload(tcp.Payload))
@@ -249,7 +235,7 @@ func mutateLoop(if4, if6 *net.TCPAddr, r *tun.Reader, w *tun.Writer, dialf dialF
 				natport := int(udp.SrcPort)
 				if nat := pt.Get(ptable.UDP, natport); nat == nil {
 					// copy stored variables
-					srcip, dstip, srcport, dstport := copyip(*srcip), copyip(*dstip), udp.SrcPort, udp.DstPort
+					srcip, dstip, srcport, dstport := netsetup.CopyIP(*srcip), netsetup.CopyIP(*dstip), udp.SrcPort, udp.DstPort
 					nat = &ptable.Entry{
 						SrcIP:   srcip,
 						DstIP:   dstip,
