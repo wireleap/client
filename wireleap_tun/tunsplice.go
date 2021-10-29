@@ -97,20 +97,22 @@ func listenDual(tunif *tun.T, tunaddr string) (if4, if6 *net.TCPAddr, err error)
 			}
 		}
 	}
-	l4, err := net.ListenTCP("tcp4", if4)
-	if err != nil {
-		err = fmt.Errorf("could not listen v4 on %s: %s", if4, err)
-		return
+	if if4 != nil {
+		l4, err := net.ListenTCP("tcp4", if4)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not listen v4 on %s: %s", if4, err)
+		}
+		log.Printf("listening on tcp4 socket %s", l4.Addr())
+		go tcpfwd(l4)
 	}
-	log.Printf("listening on tcp4 socket %s", l4.Addr())
-	l6, err := net.ListenTCP("tcp6", if6)
-	if err != nil {
-		err = fmt.Errorf("could not listen v6 on %s: %s", if6, err)
-		return
+	if if6 != nil {
+		l6, err := net.ListenTCP("tcp6", if6)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not listen v6 on %s: %s", if6, err)
+		}
+		log.Printf("listening on tcp6 socket %s", l6.Addr())
+		go tcpfwd(l6)
 	}
-	log.Printf("listening on tcp6 socket %s", l6.Addr())
-	go tcpfwd(l4)
-	go tcpfwd(l6)
 	return
 }
 
