@@ -4,5 +4,5 @@ package embedded
 
 import "embed"
 
-//go:embed wireleap_tun scripts LICENSE
+//go:embed wireleap_tun scripts LICENSE completion_darwin.bash
 var FS embed.FS
