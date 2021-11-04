@@ -1,5 +1,5 @@
-# bashrc: source path/to/completion_darwin.bash
-# zshrc: autoload compinit && compinit && autoload bashcompinit && bashcompinit && source path/to/completion_darwin.bash
+# bashrc: source path/to/completion.bash
+# zshrc: autoload compinit && compinit && autoload bashcompinit && bashcompinit && source path/to/completion.bash
 # requires: awk sed find basename uniq (should all be included in coreutils)
 
 __wireleap_cmds() {
@@ -38,9 +38,9 @@ __wireleap_comp() {
                             local cur="${COMP_WORDS[COMP_CWORD]}"
                             words="$(__wireleap_relays)"
                             # this is a hack but another way was not to be found
-                            if [ "$(basename $SHELL)" = 'zsh' ]; then
+                            if [ "$(basename "$SHELL")" = 'zsh' ]; then
                                 COMPREPLY=($(compgen -W "$words" -- "$cur"))
-                            elif [ "$(basename $SHELL)" = 'bash' ]; then
+                            elif [ "$(basename "$SHELL")" = 'bash' ]; then
                                 COMPREPLY=($(compgen -P \" -S \" -W "$words" -- "$cur"))
                             fi
                             return 0
