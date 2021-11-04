@@ -6,7 +6,6 @@ wireleap_intercept/wireleap_intercept.o
 sub/initcmd/embedded/*
 !sub/initcmd/embedded/*.go
 !sub/initcmd/embedded/scripts
-!sub/initcmd/embedded/completion_linux.bash
-!sub/initcmd/embedded/completion_darwin.bash
+!sub/initcmd/embedded/completion.bash
 
 wireleap_tun/wireleap_tun
