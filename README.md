@@ -306,8 +306,7 @@ wireleap intercept ssh USER@HOST
 ### wireleap tun
 
 To forward all traffic on a system (both TCP and UDP) through the
-`wireleap` connection broker, it is possible to use `wireleap tun`
-(experimental: Linux only).
+`wireleap` connection broker, it is possible to use `wireleap tun`.
 
 The `wireleap tun` subcommand will use the bundled `wireleap_tun` binary
 (unpacked on `wireleap init`) to set up a [tun
@@ -341,6 +340,27 @@ wireleap tun log
 # (at some later time) stop the wireleap tun daemon
 wireleap tun stop
 ```
+
+#### Potential macOS firewall issues
+
+During testing it became apparent that enabling the built-in [macOS
+application firewall](https://support.apple.com/en-us/HT201642) can
+interfere with `wireleap tun`, making it fail silently instead of
+tunneling through the configured circuit. If your application firewall
+is disabled in `System Preferences -> Security & Privacy -> Firewall`,
+you do not need to do anything. However if it is enabled, you will need
+to add a firewall rule for `wireleap`. Please ensure that you run it in
+the foreground for the first time with `wireleap tun start --fg`, which
+should bring up a prompt asking you whether to allow incoming
+connections to `wireleap`. You should answer with "Allow". If there is
+no prompt, try [adding the `wireleap` binary
+manually](https://support.apple.com/guide/mac-help/block-connections-to-your-mac-with-a-firewall-mh34041/mac#mchlp218b2b0)
+in the firewall settings with the firewall mode set to "Allow incoming
+connections". If none of that works, disabling the firewall altogether
+would allow `wireleap tun` to work. However, please note that disabling
+the firewall may affect the security of your system.
+
+We are currently investigating this issue.
 
 ## Upgrade
 
