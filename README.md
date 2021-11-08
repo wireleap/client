@@ -59,12 +59,28 @@ source](#building).
 
 ### Shell completion
 
+#### bash
+
 Bash completion is available for all `wireleap` commands, sub-commands,
 option flags, as well as `exec` and `config circuit.whitelist`. Add the
 following line to your `$HOME/.bashrc` or similar location.
 
 ```shell
-[ -e "$HOME/wireleap/completion.bash" ] && source $HOME/wireleap/completion.bash
+[ -e "$HOME/wireleap/completion.bash" ] && source "$HOME/wireleap/completion.bash"
+```
+
+#### zsh
+
+The provided `completion.bash` script is compatible with Zsh by using the
+`bashcompinit` compatibility layer. Add the following line to your
+`$HOME/.zshrc` or similar location.
+
+```shell
+if [ -e "$HOME/wireleap/completion.bash" ]; then
+    autoload compinit && compinit
+    autoload bashcompinit && bashcompinit
+    source "$HOME/wireleap/completion.bash"
+fi
 ```
 
 ## Configuration
