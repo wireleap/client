@@ -78,6 +78,20 @@ zfOfffOA5ohs0UtKFDx9+nQoOONGhplyBA==
 -----END PGP PUBLIC KEY BLOCK-----
 "
 
+# darwin realpath workaround
+command -v realpath >/dev/null 2>&1 || realpath() (
+  OURPWD="$PWD"
+  cd "$(dirname "$1")"
+  LINK="$(readlink "$(basename "$1")" || echo)"
+  while [ "$LINK" ]; do
+    cd "$(dirname "$LINK")"
+    LINK="$(readlink "$(basename "$1")" || echo)"
+  done
+  REALPATH="$PWD/$(basename "$1")"
+  cd "$OURPWD"
+  echo "$REALPATH"
+)
+
 _verify_environment() {
     [ "$(id -u)" = "0" ] && fatal "should not be run as root"
 
@@ -102,8 +116,16 @@ _verify_environment() {
     e="gpg not found. install or specify --skip-gpg (not recommended)"
     [ "$skip_gpg" ] || command -v gpg >/dev/null || fatal "$e"
 
-    e="sha512sum not found. install or --skip-checksum (not recommended)"
-    [ "$skip_checksum" ] || command -v sha512sum >/dev/null || fatal "$e"
+    SHASUM=
+    if ! [ "$skip_checksum" ]; then
+        if command -v sha512sum >/dev/null; then
+            SHASUM='sha512sum'
+        elif command -v shasum >/dev/null; then
+            SHASUM='shasum -a512'
+        else
+            fatal "sha512sum or shasum not found. install or --skip-checksum (not recommended)"
+        fi
+    fi
 
     return 0
 }
@@ -130,7 +152,7 @@ _verify_checksum() {
     [ "$skip_checksum" ] && echo "  SKIPPED!" && return 0
     filename="$1"
     eval set -- "--check --status"
-    sha512sum "$@" "$filename" || fatal "sha512sum $filename check failed"
+    $SHASUM "$@" "$filename" || fatal "$SHASUM $filename check failed"
     return 0
 }
 
