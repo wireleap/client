@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"syscall"
 	"text/tabwriter"
 
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 )
 
 func Cmd(fm0 fsdir.T) *cli.Subcmd {
@@ -145,7 +145,7 @@ func Run(fm fsdir.T, key, val string) {
 				return
 			}
 
-			syscall.Kill(pid, syscall.SIGUSR1)
+			process.Reload(pid)
 
 			if key == "address.socks" {
 				log.Printf("Note: address.socks changes will take effect on restart.")
