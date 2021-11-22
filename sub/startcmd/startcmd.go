@@ -31,6 +31,7 @@ import (
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/commonsub/startcmd"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 	"github.com/wireleap/common/cli/upgrade"
 	"github.com/wireleap/common/wlnet"
 	"github.com/wireleap/common/wlnet/transport"
@@ -225,7 +226,7 @@ func Cmd() *cli.Subcmd {
 		}
 		defer shutdown()
 		cli.SignalLoop(cli.SignalMap{
-			syscall.SIGUSR1: func() (_ bool) {
+			process.ReloadSignal: func() (_ bool) {
 				log.Println("reloading config")
 				mu.Lock()
 				defer mu.Unlock()

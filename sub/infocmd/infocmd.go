@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"syscall"
 	"time"
 
 	"github.com/wireleap/client/clientcfg"
@@ -16,6 +15,7 @@ import (
 	"github.com/wireleap/common/api/servicekey"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 )
 
 func Cmd() *cli.Subcmd {
@@ -32,7 +32,7 @@ func Cmd() *cli.Subcmd {
 
 type output struct {
 	WireleapState string  `json:"wireleap_state,omitempty"`
-	WireleapPid   int64   `json:"wireleap_pid,omitempty"`
+	WireleapPid   int     `json:"wireleap_pid,omitempty"`
 	WireleapHome  string  `json:"wireleap_home,omitempty"`
 	WireleapSocks *string `json:"wireleap_socks,omitempty"`
 	AKAvailable   int64   `json:"accesskeys_available"`
@@ -67,7 +67,7 @@ func Run(fm fsdir.T) {
 	}
 
 	var (
-		pid   int64
+		pid   int
 		state string
 	)
 
@@ -77,9 +77,7 @@ func Run(fm fsdir.T) {
 		pid = 0
 		state = "not_running"
 	} else {
-		err = syscall.Kill(int(pid), 0)
-
-		if err == nil {
+		if process.Exists(pid) {
 			state = "running"
 		} else {
 			state = "not_running"

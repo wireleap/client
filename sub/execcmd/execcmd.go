@@ -14,6 +14,7 @@ import (
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 )
 
 func Cmd() *cli.Subcmd {
@@ -58,9 +59,7 @@ func Cmd() *cli.Subcmd {
 			log.Fatalf("it appears wireleap is not running: could not get wireleap PID from %s: %s", fm.Path(filenames.Pid), err)
 		}
 
-		err = syscall.Kill(pid, 0)
-
-		if err != nil {
+		if !process.Exists(pid) {
 			log.Fatalf("it appears wireleap is not running: %s", err)
 		}
 

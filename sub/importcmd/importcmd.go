@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"syscall"
 	"text/tabwriter"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	"github.com/wireleap/common/api/pof"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 )
 
 func download(url string) ([]byte, error) {
@@ -223,7 +223,7 @@ func Cmd() *cli.Subcmd {
 					upgradev, version.VERSION,
 				)
 			}
-			syscall.Kill(pid, syscall.SIGUSR1)
+			process.Reload(pid)
 		}
 	}
 	r.SetMinimalUsage("FILE|URL")

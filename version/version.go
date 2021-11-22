@@ -6,7 +6,6 @@ package version
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/blang/semver"
 	"github.com/wireleap/client/clientcfg"
@@ -17,8 +16,8 @@ import (
 	"github.com/wireleap/common/api/interfaces/clientdir"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 	"github.com/wireleap/common/cli/upgrade"
-	"golang.org/x/sys/unix"
 )
 
 // old name compat
@@ -94,16 +93,13 @@ func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
 		err = fmt.Errorf("wireleap appears to be running, please stop it to upgrade")
 		return
 	}
-	if tuncmd.Available {
-		err = unix.Access(f.Path("wireleap_tun"), unix.W_OK)
-		if err != nil && !os.IsNotExist(err) {
-			err = fmt.Errorf(
-				"%s is not writable by current user: %s, please remove it manually to upgrade",
-				f.Path("wireleap_tun"),
-				err,
-			)
-			return
-		}
+	if tuncmd.Available && !process.Writable(f.Path("wireleap_tun")) {
+		err = fmt.Errorf(
+			"%s is not writable by current user: %s, please remove it manually to upgrade",
+			f.Path("wireleap_tun"),
+			err,
+		)
+		return
 	}
 	c := clientcfg.Defaults()
 	if err = f.Get(&c, filenames.Config); err != nil {

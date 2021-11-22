@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"syscall"
 	"time"
 
 	"github.com/wireleap/client/clientcfg"
@@ -20,6 +19,7 @@ import (
 	"github.com/wireleap/common/api/servicekey"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 )
 
 func Cmd() *cli.Subcmd {
@@ -108,7 +108,7 @@ func Cmd() *cli.Subcmd {
 			)
 		}
 
-		syscall.Kill(pid, syscall.SIGUSR1)
+		process.Reload(pid)
 	}
 
 	r := &cli.Subcmd{
