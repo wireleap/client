@@ -71,11 +71,19 @@ func Cmd() *cli.Subcmd {
 
 		conn.Close()
 
+		host, port, err := net.SplitHostPort(*c.Address.Socks)
+		if err != nil {
+			log.Fatalf("could not parse wireleap address.socks %s: %s", *c.Address.Socks, err)
+		}
+
 		err = syscall.Exec(
 			p,
 			fs.Args(),
 			append([]string{
+				"WIRELEAP_HOME=" + fm.Path(),
 				"WIRELEAP_SOCKS=" + *c.Address.Socks,
+				"WIRELEAP_SOCKS_HOST=" + host,
+				"WIRELEAP_SOCKS_PORT=" + port,
 			}, os.Environ()...),
 		)
 
