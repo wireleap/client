@@ -7,20 +7,14 @@ fatal() { echo "fatal: $*" 1>&2; exit 1; }
 WIRELEAP_SOCKS_HOST="$(echo "$WIRELEAP_SOCKS" | cut -d: -f1)"
 WIRELEAP_SOCKS_PORT="$(echo "$WIRELEAP_SOCKS" | cut -d: -f2)"
 
-if [ "$(uname -s)" = "Darwin" ]; then
-    cmd="/Applications/Firefox.app/Contents/MacOS/firefox-bin"
-    sed_extra="''"
-    [ -e "$cmd" ] || fatal "$cmd not found"
-else
-    cmd="$(basename "$0")"
-    command -v "$cmd" >/dev/null || fatal "$cmd not found"
-fi
+cmd="/Applications/Firefox.app/Contents/MacOS/firefox-bin"
+[ -e "$cmd" ] || fatal "$cmd not found"
 
 PROFILE="$HOME/.mozilla/firefox/wireleap"
 mkdir -p "$PROFILE"
 
 if [ -e "$PROFILE/prefs.js" ]; then
-    sed -i $sed_extra '/network.proxy/d' "$PROFILE/prefs.js"
+    sed -i '' '/network.proxy/d' "$PROFILE/prefs.js"
 fi
 
 cat<<EOF >> "$PROFILE/prefs.js"
