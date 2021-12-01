@@ -4,5 +4,5 @@ package embedded
 
 import "embed"
 
-//go:embed scripts LICENSE
+//go:embed scripts_windows LICENSE
 var FS embed.FS

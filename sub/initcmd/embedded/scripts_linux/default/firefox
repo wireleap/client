@@ -1,0 +1,37 @@
+#!/bin/sh
+set -e
+
+fatal() { echo "fatal: $*" 1>&2; exit 1; }
+
+[ "$WIRELEAP_SOCKS" ] || fatal "WIRELEAP_SOCKS not set"
+WIRELEAP_SOCKS_HOST="$(echo "$WIRELEAP_SOCKS" | cut -d: -f1)"
+WIRELEAP_SOCKS_PORT="$(echo "$WIRELEAP_SOCKS" | cut -d: -f2)"
+
+if [ "$(uname -s)" = "Darwin" ]; then
+    cmd="/Applications/Firefox.app/Contents/MacOS/firefox-bin"
+    sed_extra="''"
+    [ -e "$cmd" ] || fatal "$cmd not found"
+else
+    cmd="$(basename "$0")"
+    command -v "$cmd" >/dev/null || fatal "$cmd not found"
+fi
+
+PROFILE="$HOME/.mozilla/firefox/wireleap"
+mkdir -p "$PROFILE"
+
+if [ -e "$PROFILE/prefs.js" ]; then
+    sed -i $sed_extra '/network.proxy/d' "$PROFILE/prefs.js"
+fi
+
+cat<<EOF >> "$PROFILE/prefs.js"
+user_pref("network.proxy.socks", "$WIRELEAP_SOCKS_HOST");
+user_pref("network.proxy.socks_port", $WIRELEAP_SOCKS_PORT);
+user_pref("network.proxy.socks_remote_dns", true);
+user_pref("network.proxy.type", 1);
+EOF
+
+exec "$cmd" \
+    --profile "$PROFILE" \
+    --new-instance \
+    --private-window \
+    "$@"
