@@ -1,0 +1,5 @@
+This folder contains user-defined wireleap scripts and may include
+locally-modified versions of default scripts.
+
+If identically named scripts exist both here and in the "default"
+folder, this folder is given precedence when `wireleap exec` is ran.

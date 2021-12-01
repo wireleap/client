@@ -1,0 +1,5 @@
+This folder contains default scripts. They will be overwritten on
+upgrade; do not modify.
+
+If adjustments are required, create a script in the parent directory,
+"scripts".
