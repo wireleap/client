@@ -1,0 +1,2 @@
+#!/bin/sh
+find "$WIRELEAP_HOME/scripts" -type f -perm -100 -exec basename '{}' ';' | uniq
