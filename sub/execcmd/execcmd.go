@@ -60,7 +60,7 @@ func Cmd() *cli.Subcmd {
 		}
 
 		if !process.Exists(pid) {
-			log.Fatalf("it appears wireleap is not running: %s", err)
+			log.Fatalf("it appears wireleap (pid %d) is not running!", pid)
 		}
 
 		conn, err := net.DialTimeout("tcp", *c.Address.Socks, time.Second)
