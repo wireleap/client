@@ -5,13 +5,8 @@ fatal() { echo "fatal: $*" 1>&2; exit 1; }
 
 [ "$WIRELEAP_SOCKS" ] || fatal "WIRELEAP_SOCKS not set"
 
-if [ "$(uname -s)" = "Darwin" ]; then
-    cmd="/Applications/Chromium Browser.app/Contents/MacOS/Chromium Browser"
-    [ -e "$cmd" ] || fatal "$cmd not found"
-else
-    cmd="$(basename "$0")"
-    command -v "$cmd" >/dev/null || fatal "$cmd not found"
-fi
+cmd="$(basename "$0")"
+command -v "$cmd" >/dev/null || fatal "$cmd not found"
 
 exec "$cmd" \
     --proxy-server="socks5://$WIRELEAP_SOCKS" \
