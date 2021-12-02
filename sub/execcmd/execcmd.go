@@ -7,7 +7,8 @@ import (
 	"log"
 	"net"
 	"os"
-	"syscall"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/wireleap/client/clientcfg"
@@ -36,11 +37,17 @@ func Cmd() *cli.Subcmd {
 			r.Usage()
 		}
 
-		p := fm.Path("scripts", fs.Arg(0))
+		arg0 := fs.Arg(0)
+		if runtime.GOOS == "windows" {
+			arg0 += ".bat"
+		}
+
+		p := fm.Path("scripts", arg0)
+
 		fi, err := os.Stat(p)
 
 		if err != nil {
-			p0 := fm.Path("scripts", "default", fs.Arg(0))
+			p0 := fm.Path("scripts", "default", arg0)
 			fi, err = os.Stat(p0)
 			if err != nil {
 				log.Fatalf("could not stat %s or %s: %s", p, p0, err)
@@ -48,7 +55,7 @@ func Cmd() *cli.Subcmd {
 			p = p0
 		}
 
-		if fi.Mode()&0111 == 0 {
+		if runtime.GOOS != "windows" && fi.Mode()&0111 == 0 {
 			log.Fatalf("could not execute %s: file is not executable (did you `chmod +x`?)", p)
 		}
 
@@ -76,16 +83,18 @@ func Cmd() *cli.Subcmd {
 			log.Fatalf("could not parse wireleap address.socks %s: %s", *c.Address.Socks, err)
 		}
 
-		err = syscall.Exec(
-			p,
-			fs.Args(),
-			append([]string{
-				"WIRELEAP_HOME=" + fm.Path(),
-				"WIRELEAP_SOCKS=" + *c.Address.Socks,
-				"WIRELEAP_SOCKS_HOST=" + host,
-				"WIRELEAP_SOCKS_PORT=" + port,
-			}, os.Environ()...),
+		cmd := exec.Command(p, fs.Args()[1:]...)
+		cmd.Env = append(os.Environ(),
+			"WIRELEAP_HOME="+fm.Path(),
+			"WIRELEAP_SOCKS="+*c.Address.Socks,
+			"WIRELEAP_SOCKS_HOST="+host,
+			"WIRELEAP_SOCKS_PORT="+port,
 		)
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+
+		err = cmd.Run()
 
 		hint := ""
 
