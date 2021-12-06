@@ -23,6 +23,8 @@ import (
 	"github.com/wireleap/common/cli/fsdir"
 )
 
+const Available = true
+
 const bin = "wireleap_tun"
 
 func Cmd() (r *cli.Subcmd) {
