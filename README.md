@@ -36,20 +36,35 @@ This repository is for the Wireleap client.
 
 ## Installation
 
-The quickest way to install the Wireleap client is by using this
-convenience script:
+The quickest way to install the Wireleap client is by using the
+convenience script.
+
+Linux:
 
 ```shell
-curl -fsSL https://get.wireleap.com -o get-wireleap.sh
+curl -fsSL https://get.wireleap.com/linux -o get-wireleap.sh
 sh get-wireleap.sh $HOME/wireleap --symlink=$HOME/.local/bin/wireleap
 ```
 
-The above will verify your environments compatibility, download the
+macOS:
+
+```shell
+curl -fsSL https://get.wireleap.com/darwin -o get-wireleap.sh
+sh get-wireleap.sh $HOME/wireleap
+```
+
+Windows:
+
+```powershell
+powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('https://get.wireleap.com/windows')"
+```
+
+The above will verify your environment's compatibility, download the
 latest client binary as well as the associated hash file to
 cryptographically verify its integrity via GPG signature (in a temporary
-keyring) and checksum hash. If all checks pass, it will release the
-binary from quarantine, initialize the client in the specified
-directory, and create a symlink.
+keyring, currently Linux and macOS only) and checksum hash. If all
+checks pass, it will release the binary from quarantine, initialize the
+client in the specified directory, and create a symlink if requested.
 
 Alternatively, you can download the [latest release][releases] and
 perform manual verification and installation, or [build from
@@ -82,6 +97,10 @@ if [ -e "$HOME/wireleap/completion.bash" ]; then
     source "$HOME/wireleap/completion.bash"
 fi
 ```
+
+#### PowerShell
+
+Not implemented yet but planned.
 
 ## Configuration
 
@@ -285,18 +304,21 @@ google-chrome \
 
 As mentioned above, there is no standard for proxy configuration among
 applications, so a few wrapper scripts are included in
-`scripts/default/` which can be executed by invoking `wireleap exec`.
+`scripts/default/` (or `scripts\default\`) which can be executed by
+invoking `wireleap exec`.
 
 On execution, the `WIRELEAP_SOCKS` environmental variable will be
 available inside the script containing the current `wireleap` SOCKSv5
-listening address.
+listening address. The convenience environment variables
+`WIRELEAP_SOCKS_HOST`, `WIRELEAP_SOCKS_PORT` and `WIRELEAP_HOME` are
+also available.
 
-Note: User-defined scripts should be placed in `scripts/` which take
+Note: User-defined scripts should be placed in `scripts` which take
 preference over the default scripts.
 
 ```shell
-# list available default exec commands
-ls $HOME/wireleap/scripts/default
+# list available exec commands
+wireleap exec list
 
 # example usage
 wireleap exec curl URL
@@ -323,7 +345,8 @@ wireleap intercept ssh USER@HOST
 ### wireleap tun
 
 To forward all traffic on a system (both TCP and UDP) through the
-`wireleap` connection broker, it is possible to use `wireleap tun`.
+`wireleap` connection broker, it is possible to use `wireleap tun`
+(currently Linux and macOS only).
 
 The `wireleap tun` subcommand will use the bundled `wireleap_tun` binary
 (unpacked on `wireleap init`) to set up a [tun
@@ -407,9 +430,17 @@ wireleap rollback
 If the upgrade was not successful, it is possible to skip the faulty
 version explicitly.
 
+Linux:
+
 ```shell
 # skip upgrades to version 1.2.3
 echo "1.2.3" > $HOME/wireleap/.skip-upgrade-version
+```
+
+Windows:
+
+```powershell
+echo "1.2.3" > ((Split-Path -Parent (Get-Command wireleap).Source) + "\.skip-upgrade-version")
 ```
 
 ## Files
@@ -495,6 +526,8 @@ address.
 This directory is for user-defined scripts which take preference over
 the default scripts (described below).
 
+Scripts on Windows have the `.bat` extension standard for batch files.
+
 **scripts/default/**
 
 This directory contains default `wireleap`-supplied scripts. If
@@ -502,6 +535,8 @@ modifications are required, just save your version of the script under
 the same name in `scripts/` as the `scripts/default/` script you wish to
 alter. This ensures that updates will not overwrite user changes to
 scripts.
+
+Scripts on Windows have the `.bat` extension standard for batch files.
 
 ## Versioning
 
