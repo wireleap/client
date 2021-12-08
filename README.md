@@ -430,7 +430,7 @@ wireleap rollback
 If the upgrade was not successful, it is possible to skip the faulty
 version explicitly.
 
-Linux:
+Linux/macOS:
 
 ```shell
 # skip upgrades to version 1.2.3
