@@ -56,6 +56,8 @@ sh get-wireleap.sh $HOME/wireleap
 Windows:
 
 ```powershell
+# To see a description of the options accepted by the installation script:
+# powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('https://get.wireleap.com/windows'); Get-Help Get-Wireleap -Full"
 powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('https://get.wireleap.com/windows'); Get-Wireleap -Dir $env:USERPROFILE\wireleap"
 ```
 
@@ -69,29 +71,6 @@ client in the specified directory, and create a symlink if requested.
 Alternatively, you can download the [latest release][releases] and
 perform manual verification and installation, or [build from
 source](#building).
-
-To see a description of the options accepted by the installation script,
-please call:
-
-Linux:
-
-```shell
-curl -fsSL https://get.wireleap.com/linux -o get-wireleap.sh
-sh get-wireleap.sh --help
-```
-
-macOS:
-
-```shell
-curl -fsSL https://get.wireleap.com/darwin -o get-wireleap.sh
-sh get-wireleap.sh --help
-```
-
-Windows:
-
-```powershell
-powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('https://get.wireleap.com/windows'); Get-Help Get-Wireleap -Full"
-```
 
 [releases]: https://github.com/wireleap/client/releases
 
