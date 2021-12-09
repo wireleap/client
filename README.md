@@ -56,7 +56,7 @@ sh get-wireleap.sh $HOME/wireleap
 Windows:
 
 ```powershell
-powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('https://get.wireleap.com/windows'); Get-Wireleap -Dir C:\wireleap"
+powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('https://get.wireleap.com/windows'); Get-Wireleap -Dir $env:USERPROFILE\wireleap"
 ```
 
 The above will verify your environment's compatibility, download the

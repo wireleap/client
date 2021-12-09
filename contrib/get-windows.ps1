@@ -35,7 +35,7 @@ https://wireleap.com/docs/client/
 #>
 function Get-Wireleap {
     param(
-        # Destination path (eg. $env:UserProfile/wireleap, mandatory)
+        # Destination path (eg. $env:USERPROFILE\wireleap, mandatory)
         [Parameter(Mandatory)]
         [string]$Dir,
 
