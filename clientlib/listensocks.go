@@ -3,6 +3,7 @@
 package clientlib
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -65,7 +66,7 @@ func ProxyTCP(l net.Listener, dialer DialFunc, errf func(error), udpaddr net.Add
 					return
 				}
 				socks.WriteStatus(c0, socks.StatusOK, socks.AddrAddr(c0.LocalAddr()))
-				if err = wlnet.Splice(c0, c1, 0, 32768); err != nil {
+				if err = wlnet.Splice(context.Background(), c0, c1, 0, 32768); err != nil {
 					log.Printf("error splicing initial connection: %s", err)
 				}
 			case socks.UDP_ASSOC:

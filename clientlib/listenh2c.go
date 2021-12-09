@@ -3,6 +3,7 @@
 package clientlib
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"net/http"
@@ -33,7 +34,7 @@ func ListenH2C(addr string, tc *tls.Config, dialer DialFunc, errf func(error)) e
 			return
 		}
 		rwc := h2rwc.T{flushwriter.T{w}, r.Body}
-		err = wlnet.Splice(rwc, cc, 0, 32*1024)
+		err = wlnet.Splice(context.Background(), rwc, cc, 0, 32*1024)
 		if err != nil {
 			status.ErrGateway.WriteTo(w)
 		}
