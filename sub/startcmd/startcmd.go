@@ -96,8 +96,8 @@ func Cmd() *cli.Subcmd {
 				return fmt.Errorf("could not get contract directory info: %w", err)
 			}
 			// maybe there's an upgrade available?
-			if di.Channels != nil {
-				if v, ok := di.Channels[version.Channel]; ok && v.GT(version.VERSION) {
+			if di.UpgradeChannels.Client != nil {
+				if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
 					skipv := upgrade.NewConfig(fm, "wireleap", false).SkippedVersion()
 					if skipv != nil && skipv.EQ(v) {
 						log.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
