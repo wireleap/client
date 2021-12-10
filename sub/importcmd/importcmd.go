@@ -210,8 +210,8 @@ func Cmd() *cli.Subcmd {
 		}
 		// maybe there's an upgrade available?
 		var upgradev *semver.Version
-		if di.Channels != nil {
-			if v, ok := di.Channels[version.Channel]; ok && v.GT(version.VERSION) {
+		if di.UpgradeChannels.Client != nil {
+			if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
 				upgradev = &v
 			}
 		}
