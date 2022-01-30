@@ -11,3 +11,4 @@ sub/initcmd/embedded/*
 !sub/initcmd/embedded/completion.bash
 
 wireleap_tun/wireleap_tun
+wireleap_socks/wireleap_socks
