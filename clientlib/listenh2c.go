@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/wireleap/common/api/status"
@@ -15,6 +16,8 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
+
+type DialFunc func(string, string) (net.Conn, error)
 
 // ListenH2C listens on the given address, waiting for h2c connection requests
 // to dial through the circuit. The target protocol and address are supplied in

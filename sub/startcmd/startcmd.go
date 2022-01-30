@@ -205,11 +205,12 @@ func Cmd() *cli.Subcmd {
 			}
 		)
 		if c.Address.Socks != nil {
-			err = clientlib.ListenSOCKS(*c.Address.Socks, dialer, errf)
-			if err != nil {
-				log.Fatalf("listening on socks5://%s and udp://%s failed: %s", *c.Address.Socks, *c.Address.Socks, err)
-			}
-			listening = append(listening, "socksv5://"+*c.Address.Socks, "udp://"+*c.Address.Socks)
+			// TODO launch wireleap_socks forwarder
+			// err = clientlib.ListenSOCKS(*c.Address.Socks, dialer, errf)
+			// if err != nil {
+			// log.Fatalf("listening on socks5://%s and udp://%s failed: %s", *c.Address.Socks, *c.Address.Socks, err)
+			// }
+			// listening = append(listening, "socksv5://"+*c.Address.Socks, "udp://"+*c.Address.Socks)
 		}
 		if c.Address.H2C != nil {
 			err = clientlib.ListenH2C(*c.Address.H2C, tt.TLSClientConfig, dialer, errf)
