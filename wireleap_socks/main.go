@@ -172,5 +172,6 @@ func main() {
 		log.Fatalf("listening on socks5://%s failed: %s", socksaddr, err)
 	}
 
+	log.Printf("listening for SOCKSv5 connections on %s", socksaddr)
 	select {}
 }
