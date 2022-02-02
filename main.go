@@ -25,6 +25,7 @@ import (
 	"github.com/wireleap/client/sub/initcmd"
 	"github.com/wireleap/client/sub/interceptcmd"
 	"github.com/wireleap/client/sub/servicekeycmd"
+	"github.com/wireleap/client/sub/sockscmd"
 	"github.com/wireleap/client/sub/startcmd"
 	"github.com/wireleap/client/sub/tuncmd"
 	"github.com/wireleap/client/version"
@@ -53,6 +54,7 @@ func main() {
 			execcmd.Cmd(),
 			interceptcmd.Cmd(),
 			tuncmd.Cmd(),
+			sockscmd.Cmd(),
 			upgradecmd.Cmd(
 				binname,
 				upgrade.ExecutorSupervised,
