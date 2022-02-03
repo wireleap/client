@@ -47,7 +47,7 @@ func Cmd() *cli.Subcmd {
 				args,
 				append([]string{
 					"LD_PRELOAD=" + lib,
-					"SOCKS5_PROXY=" + *c.Address.Socks,
+					"SOCKS5_PROXY=" + *c.Forwarders.Socks,
 				}, os.Environ()...),
 			)
 

@@ -50,7 +50,7 @@ func Cmd() (r *cli.Subcmd) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if c.Address.H2C == nil {
+		if c.Broker.Address == nil {
 			log.Fatal("nil address.h2c in config.json")
 		}
 		if r.FlagSet.NArg() < 1 {
@@ -82,22 +82,22 @@ func Cmd() (r *cli.Subcmd) {
 			if err = syscall.Kill(pid, 0); err != nil {
 				log.Fatalf("it appears wireleap is not running: %s", err)
 			}
-			if c.Address.H2C == nil {
+			if c.Broker.Address == nil {
 				log.Fatal("`address.h2c` in config is null, please define one for this command to work")
 			}
-			if c.Address.Tun == nil {
+			if c.Forwarders.Tun == nil {
 				log.Fatal("`address.tun` in config is null, please define one for this command to work")
 			}
-			conn, err := net.DialTimeout("tcp", *c.Address.H2C, time.Second)
+			conn, err := net.DialTimeout("tcp", *c.Broker.Address, time.Second)
 			if err != nil {
-				log.Fatalf("could not connect to wireleap at address.h2c %s: %s", *c.Address.H2C, err)
+				log.Fatalf("could not connect to wireleap at address.h2c %s: %s", *c.Broker.Address, err)
 			}
 			conn.Close()
 			env := append(
 				os.Environ(),
 				"WIRELEAP_HOME="+fm.Path(),
-				"WIRELEAP_ADDR_H2C="+*c.Address.H2C,
-				"WIRELEAP_ADDR_TUN="+*c.Address.Tun,
+				"WIRELEAP_ADDR_H2C="+*c.Broker.Address,
+				"WIRELEAP_ADDR_TUN="+*c.Forwarders.Tun,
 			)
 			if r.FlagSet.Arg(1) != "--fg" {
 				err = fm.Get(&pid, bin+".pid")

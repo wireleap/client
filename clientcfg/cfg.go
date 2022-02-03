@@ -13,16 +13,25 @@ import (
 
 // C is the type of the config struct describing the config file format.
 type C struct {
-	// Timeout is the dial timeout.
-	Timeout duration.T `json:"timeout,omitempty"`
+	// Address describes the listening address of the api/controller.
+	Address *string `json:"address,omitempty"`
+	// Broker holds the settings specific to the wireleap broker.
+	Broker Broker `json:"broker,omitempty"`
+	// Forwarders holds the settings specific to the wireleap broker.
+	Forwarders Forwarders `json:"forwarders,omitempty"`
 	// Contract is the service contract used by this wireleap.
 	Contract *texturl.URL `json:"contract,omitempty"`
+}
+
+type Broker struct {
+	// Address describes the h2c listening address of the broker.
+	Address *string `json:"address,omitempty"`
+	// Timeout is the dial timeout for relay connections.
+	Timeout duration.T `json:"timeout,omitempty"`
 	// Accesskey is the section dealing with accesskey configuration.
 	Accesskey Accesskey `json:"accesskey,omitempty"`
 	// Circuit describes the configuration of the Wireleap connection circuit.
 	Circuit Circuit `json:"circuit,omitempty"`
-	// Address describes the listening addresses and ports.
-	Address Address `json:"address,omitempty"`
 }
 
 // Accesskey is the section dealing with accesskey configuration.
@@ -40,13 +49,11 @@ type Circuit struct {
 	Hops int `json:"hops,omitempty"`
 }
 
-// Address describes the listening addresses and ports.
-type Address struct {
-	// Address.Socks is the SOCKSv5 TCP and UDP listening address.
+// Forwarders describes the settings of the available forwarders.
+type Forwarders struct {
+	// Socks is the SOCKSv5 TCP and UDP listening address.
 	Socks *string `json:"socks,omitempty"`
-	// Address.H2C is the h2c listening address for local connections.
-	H2C *string `json:"h2c,omitempty"`
-	// Address.Tun is the listening address configuration for wireleap_tun.
+	// Tun is the listening address configuration for wireleap_tun.
 	Tun *string `json:"tun,omitempty"`
 }
 
@@ -58,11 +65,14 @@ func Defaults() C {
 		tunaddr = "10.13.49.0:13493"
 	)
 	return C{
-		Timeout: duration.T(time.Second * 5),
-		Circuit: Circuit{Hops: 1},
-		Address: Address{
+		Address: &h2caddr,
+		Broker: Broker{
+			Address: &h2caddr,
+			Timeout: duration.T(time.Second * 5),
+			Circuit: Circuit{Hops: 1},
+		},
+		Forwarders: Forwarders{
 			Socks: &sksaddr,
-			H2C:   &h2caddr,
 			Tun:   &tunaddr,
 		},
 	}
@@ -83,13 +93,13 @@ type Meta struct {
 
 func (c *C) Metadata() []*Meta {
 	return []*Meta{
-		{"timeout", "str", "Dial timeout duration", &c.Timeout, true},
 		{"contract", "str", "Service contract associated with accesskeys", &c.Contract, true},
-		{"address.socks", "str", "SOCKS5 proxy address of wireleap daemon", &c.Address.Socks, true},
-		{"address.h2c", "str", "H2C proxy address of wireleap daemon", &c.Address.H2C, true},
-		{"address.tun", "str", "TUN device address (not loopback)", &c.Address.Tun, true},
-		{"circuit.hops", "int", "Number of relay hops to use in a circuit", &c.Circuit.Hops, false},
-		{"circuit.whitelist", "list", "Whitelist of relays to use", &c.Circuit.Whitelist, false},
-		{"accesskey.use_on_demand", "bool", "Activate accesskeys as needed", &c.Accesskey.UseOnDemand, false},
+		{"broker.address", "str", "H2C proxy address of wireleap daemon", &c.Broker.Address, true},
+		{"broker.timeout", "str", "Dial timeout duration", &c.Broker.Timeout, true},
+		{"broker.circuit.hops", "int", "Number of relay hops to use in a circuit", &c.Broker.Circuit.Hops, false},
+		{"broker.circuit.whitelist", "list", "Whitelist of relays to use", &c.Broker.Circuit.Whitelist, false},
+		{"broker.accesskey.use_on_demand", "bool", "Activate accesskeys as needed", &c.Broker.Accesskey.UseOnDemand, false},
+		{"forwarders.socks", "str", "SOCKS5 proxy address of wireleap daemon", &c.Forwarders.Socks, true},
+		{"forwarders.tun", "str", "TUN device address (not loopback)", &c.Forwarders.Tun, true},
 	}
 }
