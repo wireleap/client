@@ -95,7 +95,7 @@ func Run(fm fsdir.T) {
 		WireleapState: state,
 		WireleapPid:   pid,
 		WireleapHome:  fm.Path(),
-		WireleapSocks: c.Address.Socks,
+		WireleapSocks: c.Forwarders.Socks,
 		AKAvailable:   int64(len(aks)),
 		SKSeconds:     left,
 	}, "", "    ")

@@ -70,23 +70,23 @@ func Cmd() *cli.Subcmd {
 			log.Fatalf("it appears wireleap (pid %d) is not running!", pid)
 		}
 
-		conn, err := net.DialTimeout("tcp", *c.Address.Socks, time.Second)
+		conn, err := net.DialTimeout("tcp", *c.Forwarders.Socks, time.Second)
 
 		if err != nil {
-			log.Fatalf("could not connect to wireleap at address.socks %s: %s", *c.Address.Socks, err)
+			log.Fatalf("could not connect to wireleap at address.socks %s: %s", *c.Forwarders.Socks, err)
 		}
 
 		conn.Close()
 
-		host, port, err := net.SplitHostPort(*c.Address.Socks)
+		host, port, err := net.SplitHostPort(*c.Forwarders.Socks)
 		if err != nil {
-			log.Fatalf("could not parse wireleap address.socks %s: %s", *c.Address.Socks, err)
+			log.Fatalf("could not parse wireleap address.socks %s: %s", *c.Forwarders.Socks, err)
 		}
 
 		cmd := exec.Command(p, fs.Args()[1:]...)
 		cmd.Env = append(os.Environ(),
 			"WIRELEAP_HOME="+fm.Path(),
-			"WIRELEAP_SOCKS="+*c.Address.Socks,
+			"WIRELEAP_SOCKS="+*c.Forwarders.Socks,
 			"WIRELEAP_SOCKS_HOST="+host,
 			"WIRELEAP_SOCKS_PORT="+port,
 		)

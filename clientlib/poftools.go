@@ -40,7 +40,7 @@ func SKSource(fm fsdir.T, c *clientcfg.C, cl *client.Client) SKSourceFunc {
 			)
 			return sk, nil
 		}
-		if !c.Accesskey.UseOnDemand {
+		if !c.Broker.Accesskey.UseOnDemand {
 			return nil, fmt.Errorf("no fresh servicekey available and accesskey.use_on_demand is false")
 		}
 		if !fetch {
