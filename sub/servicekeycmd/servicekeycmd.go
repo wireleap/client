@@ -36,7 +36,7 @@ func Cmd() *cli.Subcmd {
 		switch {
 		case c.Contract == nil:
 			log.Fatal("contract has to be set")
-		case c.Accesskey.UseOnDemand:
+		case c.Broker.Accesskey.UseOnDemand:
 			log.Fatal("accesskey.use_on_demand is enabled in config.json; refusing to run")
 		}
 

@@ -52,10 +52,10 @@ func Cmd() *cli.Subcmd {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if c.Address.Socks == nil && c.Address.H2C == nil {
+		if c.Forwarders.Socks == nil && c.Broker.Address == nil {
 			log.Fatal("both address.socks and address.h2c are nil in config, please set one or both")
 		}
-		tt := transport.New(transport.Options{Timeout: time.Duration(c.Timeout)})
+		tt := transport.New(transport.Options{Timeout: time.Duration(c.Broker.Timeout)})
 		// cache dns resolution in netstack transport
 		cache := dnscachedial.New()
 		tt.Transport.DialContext = cache.Cover(tt.Transport.DialContext)
@@ -153,9 +153,9 @@ func Cmd() *cli.Subcmd {
 				return nil, err
 			}
 			var all circuit.T
-			if c.Circuit.Whitelist != nil {
-				if len(*c.Circuit.Whitelist) > 0 {
-					for _, addr := range *c.Circuit.Whitelist {
+			if c.Broker.Circuit.Whitelist != nil {
+				if len(*c.Broker.Circuit.Whitelist) > 0 {
+					for _, addr := range *c.Broker.Circuit.Whitelist {
 						if rl[addr] != nil {
 							all = append(all, rl[addr])
 						}
@@ -164,7 +164,7 @@ func Cmd() *cli.Subcmd {
 			} else {
 				all = rl.All()
 			}
-			if r, err = circuit.Make(c.Circuit.Hops, all); err != nil {
+			if r, err = circuit.Make(c.Broker.Circuit.Hops, all); err != nil {
 				return
 			}
 			circ = r
@@ -204,20 +204,20 @@ func Cmd() *cli.Subcmd {
 				}
 			}
 		)
-		if c.Address.Socks != nil {
+		if c.Forwarders.Socks != nil {
 			// TODO launch wireleap_socks forwarder
-			// err = clientlib.ListenSOCKS(*c.Address.Socks, dialer, errf)
+			// err = clientlib.ListenSOCKS(*c.Forwarders.Socks, dialer, errf)
 			// if err != nil {
-			// log.Fatalf("listening on socks5://%s and udp://%s failed: %s", *c.Address.Socks, *c.Address.Socks, err)
+			// log.Fatalf("listening on socks5://%s and udp://%s failed: %s", *c.Forwarders.Socks, *c.Forwarders.Socks, err)
 			// }
-			// listening = append(listening, "socksv5://"+*c.Address.Socks, "udp://"+*c.Address.Socks)
+			// listening = append(listening, "socksv5://"+*c.Forwarders.Socks, "udp://"+*c.Forwarders.Socks)
 		}
-		if c.Address.H2C != nil {
-			err = clientlib.ListenH2C(*c.Address.H2C, tt.TLSClientConfig, dialer, errf)
+		if c.Broker.Address != nil {
+			err = clientlib.ListenH2C(*c.Broker.Address, tt.TLSClientConfig, dialer, errf)
 			if err != nil {
-				log.Fatalf("listening on h2c://%s failed: %s", *c.Address.H2C, err)
+				log.Fatalf("listening on h2c://%s failed: %s", *c.Broker.Address, err)
 			}
-			listening = append(listening, "h2c://"+*c.Address.H2C)
+			listening = append(listening, "h2c://"+*c.Broker.Address)
 		}
 		log.Printf("listening on: %v", listening)
 		shutdown := func() bool {
