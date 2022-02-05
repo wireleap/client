@@ -34,7 +34,7 @@ func Cmd() *cli.Subcmd {
 		}
 
 		switch {
-		case c.Contract == nil:
+		case clientlib.ContractURL(fm) == nil:
 			log.Fatal("contract has to be set")
 		case c.Broker.Accesskey.UseOnDemand:
 			log.Fatal("accesskey.use_on_demand is enabled in config.json; refusing to run")
@@ -75,7 +75,7 @@ func Cmd() *cli.Subcmd {
 		sk, err = clientlib.RefreshSK(fm, func(p *pof.T) (*servicekey.T, error) {
 			return clientlib.NewSKFromPof(
 				cl,
-				c.Contract.String()+"/servicekey/activate",
+				clientlib.ContractURL(fm).String()+"/servicekey/activate",
 				p,
 			)
 		})

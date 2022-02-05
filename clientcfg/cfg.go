@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/wireleap/common/api/duration"
-	"github.com/wireleap/common/api/texturl"
 )
 
 // C is the type of the config struct describing the config file format.
@@ -19,8 +18,6 @@ type C struct {
 	Broker Broker `json:"broker,omitempty"`
 	// Forwarders holds the settings specific to the wireleap broker.
 	Forwarders Forwarders `json:"forwarders,omitempty"`
-	// Contract is the service contract used by this wireleap.
-	Contract *texturl.URL `json:"contract,omitempty"`
 }
 
 type Broker struct {
@@ -93,7 +90,6 @@ type Meta struct {
 
 func (c *C) Metadata() []*Meta {
 	return []*Meta{
-		{"contract", "str", "Service contract associated with accesskeys", &c.Contract, true},
 		{"broker.address", "str", "H2C proxy address of wireleap daemon", &c.Broker.Address, true},
 		{"broker.timeout", "str", "Dial timeout duration", &c.Broker.Timeout, true},
 		{"broker.circuit.hops", "int", "Number of relay hops to use in a circuit", &c.Broker.Circuit.Hops, false},
