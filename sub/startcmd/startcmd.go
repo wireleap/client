@@ -176,8 +176,7 @@ func Cmd() *cli.Subcmd {
 		sks := clientlib.SKSource(fm, &c, cl)
 		// set up local listening functions
 		var (
-			listening = []string{}
-			dialer    = clientlib.CircuitDialer(
+			dialer = clientlib.CircuitDialer(
 				clientlib.AlwaysFetch(sks),
 				circuitf,
 				dialf,
@@ -205,22 +204,13 @@ func Cmd() *cli.Subcmd {
 				}
 			}
 		)
-		if c.Forwarders.Socks != nil {
-			// TODO launch wireleap_socks forwarder
-			// err = clientlib.ListenSOCKS(*c.Forwarders.Socks, dialer, errf)
-			// if err != nil {
-			// log.Fatalf("listening on socks5://%s and udp://%s failed: %s", *c.Forwarders.Socks, *c.Forwarders.Socks, err)
-			// }
-			// listening = append(listening, "socksv5://"+*c.Forwarders.Socks, "udp://"+*c.Forwarders.Socks)
-		}
 		if c.Broker.Address != nil {
 			err = clientlib.ListenH2C(*c.Broker.Address, tt.TLSClientConfig, dialer, errf)
 			if err != nil {
 				log.Fatalf("listening on h2c://%s failed: %s", *c.Broker.Address, err)
 			}
-			listening = append(listening, "h2c://"+*c.Broker.Address)
+			log.Printf("listening on h2c://%s, waiting for forwarders to connect", *c.Broker.Address)
 		}
-		log.Printf("listening on: %v", listening)
 		shutdown := func() bool {
 			log.Println("gracefully shutting down...")
 			fm.Del(filenames.Pid)
