@@ -48,12 +48,12 @@ func SKSource(fm fsdir.T, c *clientcfg.C, cl *client.Client) SKSourceFunc {
 		}
 		// discard old servicekey & get a new one
 		sk, err = RefreshSK(fm, func(p *pof.T) (*servicekey.T, error) {
-			if c.Contract == nil {
+			if ContractURL(fm) == nil {
 				return nil, fmt.Errorf("no contract defined")
 			}
 			return NewSKFromPof(
 				cl,
-				c.Contract.String()+"/servicekey/activate",
+				ContractURL(fm).String()+"/servicekey/activate",
 				p,
 			)
 		})
