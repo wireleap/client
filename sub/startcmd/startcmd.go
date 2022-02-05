@@ -75,7 +75,7 @@ func Cmd() *cli.Subcmd {
 		// write bypass
 		writeBypass := func(extra ...string) error {
 			// expose bypass for wireleap_tun
-			sc := cache.Get(c.Contract.Hostname())
+			sc := cache.Get(clientlib.ContractURL(fm).Hostname())
 			dir := cache.Get(di.Endpoint.Hostname())
 			bypass := append(sc, dir...)
 			bypass = append(bypass, extra...)
@@ -83,16 +83,17 @@ func Cmd() *cli.Subcmd {
 		}
 		// make circuit
 		syncinfo := func() error {
-			if c.Contract == nil {
+			sc := clientlib.ContractURL(fm)
+			if sc == nil {
 				return fmt.Errorf("contract is not defined")
 			}
-			if ci, err = consume.ContractInfo(cl, c.Contract); err != nil {
+			if ci, err = consume.ContractInfo(cl, sc); err != nil {
 				return fmt.Errorf(
 					"could not get contract info for %s: %s",
-					c.Contract.String(), err,
+					sc.String(), err,
 				)
 			}
-			if di, err = consume.DirectoryInfo(cl, c.Contract); err != nil {
+			if di, err = consume.DirectoryInfo(cl, sc); err != nil {
 				return fmt.Errorf("could not get contract directory info: %w", err)
 			}
 			// maybe there's an upgrade available?
@@ -110,10 +111,10 @@ func Cmd() *cli.Subcmd {
 					}
 				}
 			}
-			if rl, err = consume.ContractRelays(cl, c.Contract); err != nil {
+			if rl, err = consume.ContractRelays(cl, sc); err != nil {
 				return fmt.Errorf(
 					"could not get contract relays for %s: %s",
-					c.Contract.String(), err,
+					sc.String(), err,
 				)
 			}
 			if err = clientlib.SaveContractInfo(fm, ci, rl); err != nil {
@@ -121,7 +122,7 @@ func Cmd() *cli.Subcmd {
 			}
 			return nil
 		}
-		if c.Contract != nil {
+		if clientlib.ContractURL(fm) != nil {
 			// cache dns, sc and directory data if we can
 			if err = syncinfo(); err != nil {
 				log.Fatalf("could not get contract info: %s", err)

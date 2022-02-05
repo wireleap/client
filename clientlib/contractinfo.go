@@ -40,3 +40,17 @@ func SaveContractInfo(fm fsdir.T, ci *contractinfo.T, rl relaylist.T) (err error
 	}
 	return
 }
+
+func ContractInfo(fm fsdir.T) (ci *contractinfo.T, err error) {
+	err = fm.Get(ci, filenames.Contract)
+	return
+}
+
+func ContractURL(fm fsdir.T) *texturl.URL {
+	ci, err := ContractInfo(fm)
+	if err == nil {
+		return ci.Endpoint
+	} else {
+		return nil
+	}
+}

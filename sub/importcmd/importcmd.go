@@ -123,13 +123,12 @@ func Cmd() *cli.Subcmd {
 			)
 		}
 
-		if c.Contract == nil {
-			c.Contract = ak.Contract.Endpoint
-		} else if *c.Contract != *ak.Contract.Endpoint {
+		sc0 := clientlib.ContractURL(fm)
+		if sc0 != nil && *sc0 != *ak.Contract.Endpoint {
 			log.Fatalf(
-				"you are trying to import accesskeys for a contract %s different from the currently defined %s, please set up a separate wireleap directory for your %s needs and import %s there",
+				"you are trying to import accesskeys for a contract %s different from the currently defined %s; please set up a separate wireleap directory for your %s needs and import %s accesskeys there",
 				ak.Contract.Endpoint,
-				c.Contract,
+				sc0,
 				ak.Contract.Endpoint,
 				akfile,
 			)
@@ -160,13 +159,7 @@ func Cmd() *cli.Subcmd {
 				err,
 			)
 		}
-		if err = fm.Set(&c, filenames.Config); err != nil {
-			log.Fatalf(
-				"could not save config.json with Contract=%s: %s",
-				c.Contract.String(),
-				err,
-			)
-		}
+		sc := ci.Endpoint
 		pofs := []*pof.T{}
 		if err = fm.Get(&pofs, filenames.Pofs); errors.Is(err, io.EOF) || errors.Is(err, os.ErrNotExist) {
 			// this is fine
@@ -175,7 +168,7 @@ func Cmd() *cli.Subcmd {
 		if err != nil {
 			log.Fatalf(
 				"could not get previous pofs for %s: %s",
-				c.Contract.String(),
+				sc.String(),
 				err,
 			)
 		}
@@ -201,10 +194,10 @@ func Cmd() *cli.Subcmd {
 		if err = fm.Set(pofs, filenames.Pofs); err != nil {
 			log.Fatalf(
 				"could not save new pofs for %s: %s",
-				c.Contract.String(), err,
+				sc.String(), err,
 			)
 		}
-		di, err := consume.DirectoryInfo(cl, c.Contract)
+		di, err := consume.DirectoryInfo(cl, sc)
 		if err != nil {
 			log.Fatalf("could not get contract directory info: %s", err)
 		}
