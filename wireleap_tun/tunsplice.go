@@ -347,6 +347,7 @@ func tunsplice(t *tun.T, h2caddr, tunaddr string) error {
 		return h2conn.New(tt, h2caddr, map[string]string{
 			"Wl-Dial-Protocol": proto,
 			"Wl-Dial-Target":   addr,
+			"Wl-Forwarder":     "tun",
 		})
 	}
 	go mutateLoop(if4, if6, tun.NewReader(t), tun.NewWriter(t), dialf)

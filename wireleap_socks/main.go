@@ -36,6 +36,7 @@ func dialFuncTo(h2caddr string) DialFunc {
 		return h2conn.New(tt, h2caddr, map[string]string{
 			"Wl-Dial-Protocol": proto,
 			"Wl-Dial-Target":   addr,
+			"Wl-Forwarder":     "socks",
 		})
 	}
 }
