@@ -42,7 +42,7 @@ func SaveContractInfo(fm fsdir.T, ci *contractinfo.T, rl relaylist.T) (err error
 }
 
 func ContractInfo(fm fsdir.T) (ci *contractinfo.T, err error) {
-	err = fm.Get(ci, filenames.Contract)
+	err = fm.Get(&ci, filenames.Contract)
 	return
 }
 
