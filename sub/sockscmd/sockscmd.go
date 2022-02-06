@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -24,6 +25,8 @@ import (
 )
 
 const bin = "wireleap_socks"
+
+const pidfile = bin + ".pid"
 
 func Cmd() (r *cli.Subcmd) {
 	r = &cli.Subcmd{
@@ -91,7 +94,7 @@ func Cmd() (r *cli.Subcmd) {
 				"WIRELEAP_ADDR_SOCKS="+*c.Forwarders.Socks,
 			)
 			if r.FlagSet.Arg(1) != "--fg" {
-				err = fm.Get(&pid, bin+".pid")
+				err = fm.Get(&pid, pidfile)
 				if err == nil {
 					err = syscall.Kill(pid, 0)
 					if err == nil {
@@ -131,6 +134,11 @@ func Cmd() (r *cli.Subcmd) {
 					os.Stdout.Write(b)
 					os.Exit(1)
 				case <-time.NewTimer(time.Second * 2).C:
+					fm.Del(pidfile)
+					pidtext := []byte(strconv.Itoa(cmd.Process.Pid))
+					if err = ioutil.WriteFile(fm.Path(pidfile), pidtext, 0644); err != nil {
+						log.Fatalf("could not write pidfile %s: %s", pidfile, err)
+					}
 					log.Printf("%s spawned succesfully", bin)
 				}
 				return
