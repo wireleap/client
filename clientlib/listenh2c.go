@@ -35,12 +35,12 @@ func ListenH2C(addr string, tc *tls.Config, dialer DialFunc, errf func(error)) e
 		if fwdr == "" {
 			fwdr = "unnamed_forwarder"
 		}
+		log.Printf("%s forwarder connected", fwdr)
 		cc, err := dialer(protocol, target)
 		if err != nil {
 			log.Printf("%s->h2->circuit dial failure: %s", fwdr, err)
 			return
 		}
-		log.Println("%s forwarder connected", fwdr)
 		rwc := h2rwc.T{flushwriter.T{w}, r.Body}
 		err = wlnet.Splice(context.Background(), rwc, cc, 0, 32*1024)
 		if err != nil {
