@@ -90,7 +90,7 @@ func Cmd() (r *cli.Subcmd) {
 			env := append(
 				os.Environ(),
 				"WIRELEAP_HOME="+fm.Path(),
-				"WIRELEAP_ADDR_H2C="+*c.Broker.Address,
+				"WIRELEAP_ADDR_H2C="+*c.Broker.Address+"/broker",
 				"WIRELEAP_ADDR_SOCKS="+*c.Forwarders.Socks,
 			)
 			if r.FlagSet.Arg(1) != "--fg" {
