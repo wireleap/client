@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"sync"
@@ -28,11 +29,14 @@ import (
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
 	"github.com/wireleap/common/wlnet"
+	"github.com/wireleap/common/wlnet/flushwriter"
+	"github.com/wireleap/common/wlnet/h2rwc"
 	"github.com/wireleap/common/wlnet/transport"
 )
 
 type T struct {
 	fd    fsdir.T
+	cfg   *clientcfg.C
 	cl    *client.Client
 	cache *dnscachedial.Control
 	// global broker lock
@@ -40,38 +44,26 @@ type T struct {
 	// currently active circuit
 	// only one, should be mutex-protected
 	circ circuit.T
+	// transport
+	*transport.T
 }
 
-func New(fd fsdir.T) *T {
+func New(fd fsdir.T, cfg *clientcfg.C) *T {
 	t := &T{
 		fd: fd,
 		cl: client.New(nil, clientcontract.T, clientdir.T),
 		// cache dns resolution in netstack transport
 		cache: dnscachedial.New(),
+		T:     transport.New(transport.Options{Timeout: time.Duration(cfg.Broker.Timeout)}),
+		cfg:   cfg,
 	}
-	c := clientcfg.Defaults()
-	err := t.fd.Get(&c, filenames.Config)
-	if err != nil {
-		log.Fatal(err)
+	var err error
+	if cfg.Broker.Address == nil {
+		log.Fatal("broker.address is nil in config, please set it")
 	}
-	if c.Forwarders.Socks == nil && c.Broker.Address == nil {
-		log.Fatal("both address.socks and address.h2c are nil in config, please set one or both")
-	}
-	tt := transport.New(transport.Options{Timeout: time.Duration(c.Broker.Timeout)})
-	tt.Transport.DialContext = t.cache.Cover(tt.Transport.DialContext)
-	tt.Transport.DialTLSContext = t.cache.Cover(tt.Transport.DialTLSContext)
-	t.cl.Transport = tt.Transport
-	dialf := tt.DialWL
-	// force target protocol if needed
-	tproto, ok := os.LookupEnv("WIRELEAP_TARGET_PROTOCOL")
-	if ok {
-		dialf = func(c net.Conn, proto string, remote *url.URL, p *wlnet.Init) (net.Conn, error) {
-			if remote.Scheme == "target" {
-				proto = tproto
-			}
-			return dialf(c, proto, remote, p)
-		}
-	}
+	t.T.Transport.DialContext = t.cache.Cover(t.T.Transport.DialContext)
+	t.T.Transport.DialTLSContext = t.cache.Cover(t.T.Transport.DialTLSContext)
+	t.cl.Transport = t.T.Transport
 	if clientlib.ContractURL(t.fd) != nil {
 		// cache dns, sc and directory data if we can
 		var (
@@ -97,78 +89,106 @@ func New(fd fsdir.T) *T {
 			)
 		}
 	}
-	circuitf := func() (r []*relayentry.T, err error) {
-		// use existing if available
-		t.mu.Lock()
-		defer t.mu.Unlock()
-		if t.circ != nil {
-			return t.circ, nil
-		}
-		var (
-			rl relaylist.T
-		)
-		if _, _, rl, err = t.Sync(); err != nil {
-			return nil, err
-		}
-		var all circuit.T
-		if c.Broker.Circuit.Whitelist != nil {
-			if len(*c.Broker.Circuit.Whitelist) > 0 {
-				for _, addr := range *c.Broker.Circuit.Whitelist {
-					if rl[addr] != nil {
-						all = append(all, rl[addr])
-					}
+	return t
+}
+
+type DialFunc func(string, string) (net.Conn, error)
+
+func (t *T) Circuit() (r []*relayentry.T, err error) {
+	// use existing if available
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.circ != nil {
+		return t.circ, nil
+	}
+	var (
+		rl relaylist.T
+	)
+	if _, _, rl, err = t.Sync(); err != nil {
+		return nil, err
+	}
+	var all circuit.T
+	if t.cfg.Broker.Circuit.Whitelist != nil {
+		if len(*t.cfg.Broker.Circuit.Whitelist) > 0 {
+			for _, addr := range *t.cfg.Broker.Circuit.Whitelist {
+				if rl[addr] != nil {
+					all = append(all, rl[addr])
 				}
 			}
-		} else {
-			all = rl.All()
 		}
-		if r, err = circuit.Make(c.Broker.Circuit.Hops, all); err != nil {
-			return
-		}
-		t.circ = r
-		// expose bypass for wireleap_tun
-		err = t.writeBypass(t.cache.Get(r[0].Addr.Hostname())...)
+	} else {
+		all = rl.All()
+	}
+	if r, err = circuit.Make(t.cfg.Broker.Circuit.Hops, all); err != nil {
 		return
 	}
-	sks := clientlib.SKSource(t.fd, &c, t.cl)
-	// set up local listening functions
-	var (
-		dialer = clientlib.CircuitDialer(
-			clientlib.AlwaysFetch(sks),
-			circuitf,
-			dialf,
-		)
-		errf = func(e error) {
-			if err != nil {
-				if o := clientlib.TraceOrigin(err, t.circ); o != nil {
-					if status.IsCircuitError(err) {
-						// reset on circuit errors
-						log.Printf(
-							"relay-originated circuit error from %s: %s, resetting circuit",
-							o.Pubkey,
-							err,
-						)
-						t.mu.Lock()
-						t.circ = nil
-						t.mu.Unlock()
-					} else {
-						// not reset-worthy
-						log.Printf("error from %s: %s", o.Pubkey, err)
-					}
-				} else {
-					log.Printf("circuit dial error: %s", err)
-				}
-			}
-		}
-	)
-	if c.Broker.Address != nil {
-		err = clientlib.ListenH2C(*c.Broker.Address, tt.TLSClientConfig, dialer, errf)
-		if err != nil {
-			log.Fatalf("listening on h2c://%s failed: %s", *c.Broker.Address, err)
-		}
-		log.Printf("listening on h2c://%s, waiting for forwarders to connect", *c.Broker.Address)
+	t.circ = r
+	// expose bypass for wireleap_tun
+	err = t.writeBypass(t.cache.Get(r[0].Addr.Hostname())...)
+	return
+}
+
+func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		status.ErrMethod.WriteTo(w)
+		return
 	}
-	return &T{}
+	protocol := r.Header.Get("Wl-Dial-Protocol")
+	target := r.Header.Get("Wl-Dial-Target")
+	fwdr := r.Header.Get("Wl-Forwarder")
+	if fwdr == "" {
+		fwdr = "unnamed_forwarder"
+	}
+	log.Printf("%s forwarder connected", fwdr)
+
+	dialf := t.T.DialWL
+	// force target protocol if needed
+	tproto, ok := os.LookupEnv("WIRELEAP_TARGET_PROTOCOL")
+	if ok {
+		dialf = func(c net.Conn, proto string, remote *url.URL, p *wlnet.Init) (net.Conn, error) {
+			if remote.Scheme == "target" {
+				proto = tproto
+			}
+			return dialf(c, proto, remote, p)
+		}
+	}
+
+	sks := clientlib.SKSource(t.fd, t.cfg, t.cl)
+	dialer := clientlib.CircuitDialer(
+		clientlib.AlwaysFetch(sks),
+		t.Circuit,
+		dialf,
+	)
+	cc, err := dialer(protocol, target)
+	if err != nil {
+		log.Printf("%s->h2->circuit dial failure: %s", fwdr, err)
+		return
+	}
+	rwc := h2rwc.T{flushwriter.T{w}, r.Body}
+	err = wlnet.Splice(context.Background(), rwc, cc, 0, 32*1024)
+	if err != nil {
+		if o := clientlib.TraceOrigin(err, t.circ); o != nil {
+			if status.IsCircuitError(err) {
+				// reset on circuit errors
+				log.Printf(
+					"relay-originated circuit error from %s: %s, resetting circuit",
+					o.Pubkey,
+					err,
+				)
+				t.mu.Lock()
+				t.circ = nil
+				t.mu.Unlock()
+			} else {
+				// not reset-worthy
+				log.Printf("error from %s: %s", o.Pubkey, err)
+			}
+		} else {
+			log.Printf("circuit dial error: %s", err)
+		}
+		status.ErrGateway.WriteTo(w)
+	}
+	cc.Close()
+	rwc.Close()
 }
 
 // write bypass.json file
@@ -225,13 +245,13 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 	return
 }
 
-func (t *T) Reload() (_ bool) {
+func (t *T) Reload() {
 	log.Println("reloading config")
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	c := clientcfg.Defaults()
-	err := t.fd.Get(&c, filenames.Config)
+	cfg := clientcfg.Defaults()
+	err := t.fd.Get(&cfg, filenames.Config)
 	if err != nil {
 		log.Printf(
 			"could not reload config: %s, aborting reload",
@@ -239,6 +259,7 @@ func (t *T) Reload() (_ bool) {
 		)
 		return
 	}
+	t.cfg = &cfg
 	// refresh contract info
 	if _, _, _, err := t.Sync(); err != nil {
 		log.Printf(
@@ -249,11 +270,9 @@ func (t *T) Reload() (_ bool) {
 	}
 	// reset circuit
 	t.circ = nil
-	return
 }
 
-func (t *T) Shutdown() bool {
+func (t *T) Shutdown() {
 	log.Println("gracefully shutting down...")
 	t.fd.Del(filenames.Pid)
-	return true
 }
