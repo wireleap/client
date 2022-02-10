@@ -44,6 +44,13 @@ if [ "$GOOS" = 'linux' ] || [ "$GOOS" = 'darwin' ]; then
     mv "$SRCDIR/wireleap_tun/wireleap_tun" "$SRCDIR/sub/initcmd/embedded"
 fi
 
+info "building wireleap_socks"
+cd "$SRCDIR/wireleap_socks"
+go get -v -d ./...
+CGO_ENABLED=0 go build
+cd -
+mv "$SRCDIR/wireleap_socks/wireleap_socks" "$SRCDIR/sub/initcmd/embedded"
+
 cp "$SRCDIR/LICENSE" "$SRCDIR/sub/initcmd/embedded/"
 
 info "building ..."
