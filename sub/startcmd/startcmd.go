@@ -64,6 +64,8 @@ func Cmd() *cli.Subcmd {
 		if c.Broker.Address == nil {
 			log.Fatalf("broker.address not provided, refusing to start")
 		}
+		log.Default().SetFlags(log.LstdFlags | log.Lmsgprefix)
+		log.Default().SetPrefix("[broker] ")
 		restlog := log.New(os.Stderr, "[restapi] ", log.LstdFlags|log.Lmsgprefix)
 		broklog := log.New(os.Stderr, "[broker] ", log.LstdFlags|log.Lmsgprefix)
 		brok := broker.New(f, &c, broklog)
@@ -105,7 +107,7 @@ func Cmd() *cli.Subcmd {
 		})
 	}
 	r := startcmd.Cmd("wireleap", run)
-	r.Desc = fmt.Sprintf("%s %s", r.Desc, "(SOCKSv5/connection broker)")
+	r.Desc = fmt.Sprintf("%s %s", r.Desc, "(Wireleap connection broker)")
 	r.Sections = []cli.Section{
 		{
 			Title: "Signals",
