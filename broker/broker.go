@@ -46,9 +46,11 @@ type T struct {
 	circ circuit.T
 	// transport
 	*transport.T
+	// broker prefix logger
+	l *log.Logger
 }
 
-func New(fd fsdir.T, cfg *clientcfg.C) *T {
+func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 	t := &T{
 		fd: fd,
 		cl: client.New(nil, clientcontract.T, clientdir.T),
@@ -56,10 +58,11 @@ func New(fd fsdir.T, cfg *clientcfg.C) *T {
 		cache: dnscachedial.New(),
 		T:     transport.New(transport.Options{Timeout: time.Duration(cfg.Broker.Timeout)}),
 		cfg:   cfg,
+		l:     l,
 	}
 	var err error
 	if cfg.Broker.Address == nil {
-		log.Fatal("broker.address is nil in config, please set it")
+		t.l.Fatal("broker.address is nil in config, please set it")
 	}
 	t.T.Transport.DialContext = t.cache.Cover(t.T.Transport.DialContext)
 	t.T.Transport.DialTLSContext = t.cache.Cover(t.T.Transport.DialTLSContext)
@@ -71,19 +74,19 @@ func New(fd fsdir.T, cfg *clientcfg.C) *T {
 			rl relaylist.T
 		)
 		if _, di, rl, err = t.Sync(); err != nil {
-			log.Fatalf("could not get contract info: %s", err)
+			t.l.Fatalf("could not get contract info: %s", err)
 		}
 		// cache relay ip addresses for tun
 		if rl != nil {
 			for _, r := range rl.All() {
 				if err = t.cache.Cache(context.Background(), r.Addr.Hostname()); err != nil {
-					log.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
+					t.l.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
 				}
 			}
 		}
 		// write bypass for tun
 		if err = t.writeBypass(t.cache.Get(di.Endpoint.Hostname())...); err != nil {
-			log.Fatalf(
+			t.l.Fatalf(
 				"could not write first bypass file %s: %s",
 				t.fd.Path(filenames.Bypass), err,
 			)
@@ -139,7 +142,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if fwdr == "" {
 		fwdr = "unnamed_forwarder"
 	}
-	log.Printf("%s forwarder connected", fwdr)
+	t.l.Printf("%s forwarder connected", fwdr)
 
 	dialf := t.T.DialWL
 	// force target protocol if needed
@@ -161,7 +164,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	cc, err := dialer(protocol, target)
 	if err != nil {
-		log.Printf("%s->h2->circuit dial failure: %s", fwdr, err)
+		t.l.Printf("%s->h2->circuit dial failure: %s", fwdr, err)
 		return
 	}
 	rwc := h2rwc.T{flushwriter.T{w}, r.Body}
@@ -170,7 +173,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if o := clientlib.TraceOrigin(err, t.circ); o != nil {
 			if status.IsCircuitError(err) {
 				// reset on circuit errors
-				log.Printf(
+				t.l.Printf(
 					"relay-originated circuit error from %s: %s, resetting circuit",
 					o.Pubkey,
 					err,
@@ -180,10 +183,10 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				t.mu.Unlock()
 			} else {
 				// not reset-worthy
-				log.Printf("error from %s: %s", o.Pubkey, err)
+				t.l.Printf("error from %s: %s", o.Pubkey, err)
 			}
 		} else {
-			log.Printf("circuit dial error: %s", err)
+			t.l.Printf("circuit dial error: %s", err)
 		}
 		status.ErrGateway.WriteTo(w)
 	}
@@ -221,10 +224,10 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 		if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
 			skipv := upgrade.NewConfig(t.fd, "wireleap", false).SkippedVersion()
 			if skipv != nil && skipv.EQ(v) {
-				log.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
-				log.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
+				t.l.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
+				t.l.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
 			} else {
-				log.Fatalf(
+				t.l.Fatalf(
 					"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
 					v, version.VERSION,
 				)
@@ -246,14 +249,14 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 }
 
 func (t *T) Reload() {
-	log.Println("reloading config")
+	t.l.Println("reloading config")
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	cfg := clientcfg.Defaults()
 	err := t.fd.Get(&cfg, filenames.Config)
 	if err != nil {
-		log.Printf(
+		t.l.Printf(
 			"could not reload config: %s, aborting reload",
 			err,
 		)
@@ -262,7 +265,7 @@ func (t *T) Reload() {
 	t.cfg = &cfg
 	// refresh contract info
 	if _, _, _, err := t.Sync(); err != nil {
-		log.Printf(
+		t.l.Printf(
 			"could not refresh contract info: %s, aborting reload",
 			err,
 		)
@@ -273,6 +276,6 @@ func (t *T) Reload() {
 }
 
 func (t *T) Shutdown() {
-	log.Println("gracefully shutting down...")
+	t.l.Println("gracefully shutting down...")
 	t.fd.Del(filenames.Pid)
 }

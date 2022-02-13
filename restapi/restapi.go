@@ -2,11 +2,25 @@
 
 package restapi
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
 
 // api server stub
-type T struct{}
+type T struct {
+	l *log.Logger
+}
 
-func New() *T { return &T{} }
+func New(_ *log.Logger) *T {
+	return &T{}
+}
 
-func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
+func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/", "":
+		w.Write([]byte("hello world"))
+	default:
+		http.NotFound(w, r)
+	}
+}
