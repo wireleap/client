@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"syscall"
 
 	"github.com/wireleap/client/broker"
@@ -22,6 +23,22 @@ import (
 	"golang.org/x/net/http2/h2c"
 )
 
+var reloads, shutdowns []func()
+
+func reload() bool {
+	for _, f := range reloads {
+		f()
+	}
+	return false
+}
+
+func shutdown() bool {
+	for _, f := range shutdowns {
+		f()
+	}
+	return true
+}
+
 func setupServer(l net.Listener, h http.Handler, tc *tls.Config) {
 	h1s := &http.Server{Handler: h, TLSConfig: tc}
 	h2s := &http2.Server{MaxHandlers: 0, MaxConcurrentStreams: 0}
@@ -31,7 +48,7 @@ func setupServer(l net.Listener, h http.Handler, tc *tls.Config) {
 	h1s.Handler = h2c.NewHandler(h1s.Handler, h2s)
 	go func() {
 		if err := h1s.Serve(l); err != nil {
-			log.Fatalf("listening on h2c://%s failed: %s", l.Addr(), err)
+			log.Fatalf("serving on h2c://%s failed: %s", l.Addr(), err)
 		}
 	}()
 }
@@ -41,30 +58,15 @@ func Cmd() *cli.Subcmd {
 		c := clientcfg.Defaults()
 		err := f.Get(&c, filenames.Config)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("could not read config: %s", err)
 		}
 		// common signal handler setup
-		var reloads, shutdowns []func()
-		reload := func() bool {
-			for _, f := range reloads {
-				f()
-			}
-			return false
-		}
-		shutdown := func() bool {
-			for _, f := range shutdowns {
-				f()
-			}
-			return true
-		}
 		if c.Broker.Address == nil {
-			if c.Address == nil {
-				log.Fatalf("neither address nor broker.address provided, refusing to start")
-			} else {
-				log.Fatalf("broker.address not provided, refusing to start")
-			}
+			log.Fatalf("broker.address not provided, refusing to start")
 		}
-		brok := broker.New(f, &c)
+		restlog := log.New(os.Stderr, "[restapi] ", log.LstdFlags|log.Lmsgprefix)
+		broklog := log.New(os.Stderr, "[broker] ", log.LstdFlags|log.Lmsgprefix)
+		brok := broker.New(f, &c, broklog)
 		shutdowns = append(shutdowns, brok.Shutdown)
 		reloads = append(reloads, brok.Reload)
 		defer brok.Shutdown()
@@ -73,30 +75,27 @@ func Cmd() *cli.Subcmd {
 		mux.Handle("/broker", brok)
 
 		// combo socket?
-		listener := "broker"
 		if *c.Address == *c.Broker.Address {
-			mux.Handle("/api", restapi.New())
-			listener = "broker+restapi"
+			mux.Handle("/api", restapi.New(restlog))
+			restlog.Printf("listening on h2c://%s", *c.Address)
+		} else {
+			restmux := http.NewServeMux()
+			restmux.Handle("/api", restapi.New(restlog))
+
+			restl, err := net.Listen("tcp", *c.Address)
+			if err != nil {
+				restlog.Fatalf("listening on h2c://%s failed: %s", *c.Address, err)
+			}
+			setupServer(restl, restmux, brok.T.TLSClientConfig)
+			restlog.Printf("listening on h2c://%s", *c.Address)
 		}
 
 		brokl, err := net.Listen("tcp", *c.Broker.Address)
 		if err != nil {
-			log.Fatalf("%s listening on h2c://%s failed: %s", listener, *c.Broker.Address, err)
+			broklog.Fatalf("listening on h2c://%s failed: %s", *c.Broker.Address, err)
 		}
 		setupServer(brokl, mux, brok.T.TLSClientConfig)
-		log.Printf("%s listening on h2c://%s, waiting for forwarders to connect", listener, *c.Broker.Address)
-
-		if *c.Address != *c.Broker.Address {
-			restmux := http.NewServeMux()
-			restmux.Handle("/api", restapi.New())
-
-			restl, err := net.Listen("tcp", *c.Address)
-			if err != nil {
-				log.Fatalf("api listening on h2c://%s failed: %s", *c.Address, err)
-			}
-			setupServer(restl, restmux, brok.T.TLSClientConfig)
-			log.Printf("api listening on h2c://%s", *c.Address)
-		}
+		broklog.Printf("listening on h2c://%s, waiting for forwarders to connect", *c.Broker.Address)
 
 		cli.SignalLoop(cli.SignalMap{
 			process.ReloadSignal: reload,
