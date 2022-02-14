@@ -4,6 +4,7 @@ package startcmd
 
 import (
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -53,6 +54,11 @@ func setupServer(l net.Listener, h http.Handler, tc *tls.Config) {
 	}()
 }
 
+var (
+	broklog = log.New(os.Stderr, "[broker] ", log.LstdFlags|log.Lmsgprefix)
+	restlog = log.New(os.Stderr, "[restapi] ", log.LstdFlags|log.Lmsgprefix)
+)
+
 func Cmd() *cli.Subcmd {
 	run := func(f fsdir.T) {
 		c := clientcfg.Defaults()
@@ -66,8 +72,6 @@ func Cmd() *cli.Subcmd {
 		}
 		log.Default().SetFlags(log.LstdFlags | log.Lmsgprefix)
 		log.Default().SetPrefix("[broker] ")
-		restlog := log.New(os.Stderr, "[restapi] ", log.LstdFlags|log.Lmsgprefix)
-		broklog := log.New(os.Stderr, "[broker] ", log.LstdFlags|log.Lmsgprefix)
 		brok := broker.New(f, &c, broklog)
 		shutdowns = append(shutdowns, brok.Shutdown)
 		reloads = append(reloads, brok.Reload)
@@ -78,11 +82,11 @@ func Cmd() *cli.Subcmd {
 
 		// combo socket?
 		if *c.Address == *c.Broker.Address {
-			mux.Handle("/api", restapi.New(restlog))
+			mux.Handle("/api/", http.StripPrefix("/api", restapi.New(restlog)))
 			restlog.Printf("listening on h2c://%s", *c.Address)
 		} else {
 			restmux := http.NewServeMux()
-			restmux.Handle("/api", restapi.New(restlog))
+			restmux.Handle("/api/", http.StripPrefix("/api", restapi.New(restlog)))
 
 			restl, err := net.Listen("tcp", *c.Address)
 			if err != nil {
