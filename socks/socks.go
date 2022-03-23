@@ -1,11 +1,13 @@
 // Copyright (c) 2022 Wireleap
 
 // Package socks provides a barebones SOCKSv5 server handshake protocol
-// implementation.
+// implementation according to RFC1928.
+// https://datatracker.ietf.org/doc/html/rfc1928
 package socks
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -138,11 +140,9 @@ func (t Addr) IPPort() (ip net.IP, port int) {
 	return
 }
 
-func ComposeUDP(srcaddr, dstaddr Addr, p []byte) (r []byte, err error) {
+func ComposeUDP(dstaddr Addr, p []byte) (r []byte, err error) {
 	// RSV, RSV, FRAG
 	r = []byte{0, 0, 0}
-	// ATYP, ADDR, PORT
-	r = append(r, srcaddr...)
 	// ATYP, ADDR, PORT
 	r = append(r, dstaddr...)
 	// DATA
@@ -150,27 +150,29 @@ func ComposeUDP(srcaddr, dstaddr Addr, p []byte) (r []byte, err error) {
 	return
 }
 
-func DissectUDP(p []byte) (srcaddr Addr, dstaddr Addr, data []byte) {
-	// RSV, RSV, FRAG ignored
-	// ATYP
+var ErrFragment = errors.New("received UDP message is fragmented, fragmentation is not supported")
+
+func DissectUDP(p []byte) (dstaddr Addr, data []byte, err error) {
+	// RSV, RSV ignored
+	// FRAG -- do not process fragmentation
+	if p[2] != 0 {
+		err = ErrFragment
+		return
+	}
+	// ATYP, ADDR, DATA
 	switch p[3] {
 	case ADDR_IPV4, ADDR_IPV6:
 		mult := p[3]
 		// ATYP + (1 or 4) * 4 + PORT
-		srcaddr = make([]byte, 1+mult*4+2)
-		copy(srcaddr, p[3:])
-		// ATYP + (1 or 4) * 4 + PORT
 		dstaddr = make([]byte, 1+mult*4+2)
-		copy(dstaddr, p[3+len(srcaddr):])
-		data = p[3+len(srcaddr)+len(dstaddr):]
+		copy(dstaddr, p[3:])
+		data = p[3+len(dstaddr):]
 	case ADDR_FQDN:
 		// SIZE
 		size := p[4]
-		srcaddr = make([]byte, 2+size+2)
-		copy(srcaddr, p[3:])
 		dstaddr = make([]byte, 2+size+2)
-		copy(srcaddr, p[3+len(srcaddr):])
-		data = p[2+len(srcaddr)+len(dstaddr):]
+		copy(dstaddr, p[3:])
+		data = p[2+len(dstaddr):]
 	}
 	return
 }
