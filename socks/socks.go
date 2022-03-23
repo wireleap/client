@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Wireleap
+// Copyright (c) 2022 Wireleap
 
 // Package socks provides a barebones SOCKSv5 server handshake protocol
 // implementation.
