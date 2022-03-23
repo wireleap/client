@@ -91,7 +91,11 @@ func ProxyUDP(l net.PacketConn, dialer DialFunc, errf func(error)) {
 			continue
 		}
 		go func() {
-			srcaddr, dstaddr, data := socks.DissectUDP(ibuf[:n])
+			dstaddr, data, err := socks.DissectUDP(ibuf[:n])
+			if err != nil {
+				log.Printf("SOCKSv5 failed dissecting UDP packet: %s", err)
+				return
+			}
 			conn, err := dialer("udp", dstaddr.String())
 			if err != nil {
 				log.Printf(
@@ -117,7 +121,7 @@ func ProxyUDP(l net.PacketConn, dialer DialFunc, errf func(error)) {
 					}
 					break
 				}
-				b, err := socks.ComposeUDP(srcaddr, dstaddr, obuf[:n])
+				b, err := socks.ComposeUDP(dstaddr, obuf[:n])
 				if err != nil {
 					log.Printf("error writing %s<-%s<-%s via udp: %s", laddr, l.LocalAddr(), dstaddr, err)
 					break
