@@ -1,10 +1,16 @@
 @echo off
-set bin=%ProgramFiles%\Mozilla Firefox\firefox.exe
 
-if not exist "%bin%" (
-    echo "The executable file [%bin%] does not exist."
-    exit /b 1
+set bin64=%ProgramFiles%\Mozilla Firefox\firefox.exe
+set bin32=%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe
+
+if not exist "%bin64%" (
+    if not exist "%bin32%" (
+        echo "The executable file [%bin32%] does not exist."
+        exit /b 1
+    )
+    set bin="%bin32%"
 )
+set bin="%bin64%"
 
 set profile=%LOCALAPPDATA%/Mozilla/Firefox/wireleap
 md "%profile%"
