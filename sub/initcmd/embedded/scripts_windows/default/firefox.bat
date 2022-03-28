@@ -22,4 +22,4 @@ md "%profile%"
     echo.user_pref("network.proxy.type", 1^);
 )
 
-"%bin%" --profile "%profile%" --new-instance --private-window %*
+%bin% --profile "%profile%" --new-instance --private-window %*
