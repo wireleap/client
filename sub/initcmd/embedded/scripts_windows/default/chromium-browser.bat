@@ -12,4 +12,4 @@ if not exist "%bin64%" (
 )
 set bin="%bin64%"
 
-"%bin%" --proxy-server="socks5://%WIRELEAP_SOCKS%" --user-data-dir="%LOCALAPPDATA%\Chromium\chromium-wireleap" --incognito %*
+%bin% --proxy-server="socks5://%WIRELEAP_SOCKS%" --user-data-dir="%LOCALAPPDATA%\Chromium\chromium-wireleap" --incognito %*
