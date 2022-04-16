@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+fatal() { echo "fatal: $*" 1>&2; exit 1; }
+
+[ "$WIRELEAP_SOCKS" ] || fatal "WIRELEAP_SOCKS not set"
+
+cmd="/Applications/Brave.app/Contents/MacOS/Brave"
+[ -e "$cmd" ] || fatal "$cmd not found"
+
+exec "$cmd" \
+    --proxy-server="socks5://$WIRELEAP_SOCKS" \
+    --host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE 127.0.0.1" \
+    --user-data-dir="$HOME/.config/brave-browser-wireleap" \
+    --incognito \
+    "$@"
