@@ -10,6 +10,7 @@ command -v "$cmd" >/dev/null || fatal "$cmd not found"
 
 exec "$cmd" \
     --proxy-server="socks5://$WIRELEAP_SOCKS" \
+    --host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE 127.0.0.1" \
     --user-data-dir="$HOME/.config/google-chrome-wireleap" \
     --incognito \
     "$@"
