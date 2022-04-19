@@ -5,7 +5,7 @@ fatal() { echo "fatal: $*" 1>&2; exit 1; }
 
 [ "$WIRELEAP_SOCKS" ] || fatal "WIRELEAP_SOCKS not set"
 
-cmd="/Applications/Brave.app/Contents/MacOS/Brave"
+cmd="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
 [ -e "$cmd" ] || fatal "$cmd not found"
 
 exec "$cmd" \
