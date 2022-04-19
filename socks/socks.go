@@ -116,12 +116,16 @@ func AddrAddr(orig net.Addr) (r Addr) {
 
 func (t Addr) String() string {
 	if ip, port := t.IPPort(); ip != nil {
+		// ip:port
 		return net.JoinHostPort(ip.String(), strconv.Itoa(port))
 	}
 	if len(t) < 2 || len(t) < int(2+t[1]+2) {
+		// ???
 		return ""
 	}
-	return string(t[2 : t[1]+2]) // fqdn
+	// fqdn:port
+	port := int(t[1]+2)<<8 | int(t[1]+2+1)
+	return net.JoinHostPort(string(t[2:t[1]+2]), strconv.Itoa(port))
 }
 
 func (t Addr) IPPort() (ip net.IP, port int) {
