@@ -1,7 +1,7 @@
 @echo off
 
-set bin64=%ProgramFiles%\BraveSoftware\brave.exe
-set bin32=%ProgramFiles(x86)%\BraveSoftware\brave.exe
+set bin64=%ProgramFiles%\BraveSoftware\Brave-Browser\Application\brave.exe
+set bin32=%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe
 
 set bin="%bin64%"
 if not exist "%bin64%" (
