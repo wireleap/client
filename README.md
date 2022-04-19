@@ -432,17 +432,20 @@ wireleap rollback
 If the upgrade was not successful, it is possible to skip the faulty
 version explicitly.
 
+Note: since the `.skip-upgrade-version` file has to be valid JSON, the
+version number to be skipped should be quoted.
+
 Linux/macOS:
 
 ```shell
 # skip upgrades to version 1.2.3
-echo "1.2.3" > $HOME/wireleap/.skip-upgrade-version
+echo '"1.2.3"' > $HOME/wireleap/.skip-upgrade-version
 ```
 
 Windows:
 
 ```powershell
-echo "1.2.3" > ((Split-Path -Parent (Get-Command wireleap).Source) + "\.skip-upgrade-version")
+echo '"1.2.3"' > ((Split-Path -Parent (Get-Command wireleap).Source) + "\.skip-upgrade-version")
 ```
 
 ## Files
