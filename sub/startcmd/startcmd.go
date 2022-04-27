@@ -4,7 +4,6 @@ package startcmd
 
 import (
 	"crypto/tls"
-	"flag"
 	"fmt"
 	"log"
 	"net"
