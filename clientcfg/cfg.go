@@ -57,14 +57,15 @@ type Forwarders struct {
 // Defaults provides a config with sane defaults whenever possible.
 func Defaults() C {
 	var (
-		sksaddr = "127.0.0.1:13491"
-		h2caddr = "127.0.0.1:13492"
-		tunaddr = "10.13.49.0:13493"
+		sksaddr  = "127.0.0.1:13491"
+		restaddr = "127.0.0.1:13492"
+		brokaddr = "127.0.0.1:13492"
+		tunaddr  = "10.13.49.0:13493"
 	)
 	return C{
-		Address: &h2caddr,
+		Address: &restaddr,
 		Broker: Broker{
-			Address: &h2caddr,
+			Address: &brokaddr,
 			Timeout: duration.T(time.Second * 5),
 			Circuit: Circuit{Hops: 1},
 		},
