@@ -3,10 +3,12 @@
 package restapi
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/wireleap/client/broker"
+	"github.com/wireleap/common/api/status"
 )
 
 // api server stub
@@ -21,6 +23,8 @@ func New(br *broker.T, l *log.Logger) *T {
 
 func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
+	case "/version":
+		t.reply(w, VersionReply{VERSION})
 	case "/", "":
 		w.Write([]byte("hello world"))
 		t.l.Printf("just served %+v", r)
@@ -28,4 +32,14 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		t.l.Printf("%s just served %+v", r.URL.Path, r)
 		http.NotFound(w, r)
 	}
+}
+
+func (t *T) reply(w http.ResponseWriter, x interface{}) {
+	b, err := json.Marshal(x)
+	if err != nil {
+		t.l.Printf("error %s while serving reply", err)
+		status.ErrInternal.WriteTo(w)
+		return
+	}
+	w.Write(b)
 }
