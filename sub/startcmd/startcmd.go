@@ -70,7 +70,7 @@ func Cmd() *cli.Subcmd {
 			log.Fatalf("broker.address not provided, refusing to start")
 		}
 		log.Default().SetFlags(log.LstdFlags | log.Lmsgprefix)
-		log.Default().SetPrefix("[broker] ")
+		log.Default().SetPrefix("[controller] ")
 		brok := broker.New(f, &c, broklog)
 		shutdowns = append(shutdowns, brok.Shutdown)
 		reloads = append(reloads, brok.Reload)
