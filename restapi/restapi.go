@@ -5,15 +5,18 @@ package restapi
 import (
 	"log"
 	"net/http"
+
+	"github.com/wireleap/client/broker"
 )
 
 // api server stub
 type T struct {
-	l *log.Logger
+	br *broker.T
+	l  *log.Logger
 }
 
-func New(l *log.Logger) *T {
-	return &T{l: l}
+func New(br *broker.T, l *log.Logger) *T {
+	return &T{br: br, l: l}
 }
 
 func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {

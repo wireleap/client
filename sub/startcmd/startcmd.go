@@ -81,11 +81,11 @@ func Cmd() *cli.Subcmd {
 
 		// combo socket?
 		if *c.Address == *c.Broker.Address {
-			mux.Handle("/api/", http.StripPrefix("/api", restapi.New(restlog)))
+			mux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
 			restlog.Printf("listening on h2c://%s", *c.Address)
 		} else {
 			restmux := http.NewServeMux()
-			restmux.Handle("/api/", http.StripPrefix("/api", restapi.New(restlog)))
+			restmux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
 
 			restl, err := net.Listen("tcp", *c.Address)
 			if err != nil {
