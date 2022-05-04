@@ -76,18 +76,6 @@ func Cmd() *cli.Subcmd {
 		reloads = append(reloads, brok.Reload)
 		defer brok.Shutdown()
 
-		if os.Getenv("WIRELEAP_BACKGROUND") == "1" {
-			const fname = "wireleap-api.log"
-			logf, err := os.Create(fname)
-			if err != nil {
-				restlog.Fatalf("could not create rest api logfile %s: %s", fname, err)
-			}
-			restlog.SetOutput(logf)
-			shutdowns = append(shutdowns, func() {
-				logf.Close()
-			})
-		}
-
 		mux := http.NewServeMux()
 		mux.Handle("/broker", brok)
 
