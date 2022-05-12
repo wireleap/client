@@ -509,20 +509,20 @@ List of `accesskey` objects.
 ```shell
 $ curl -X POST $BASE_URL/accesskeys/import \
   -H 'Content-Type: application/json' \
-  -d '{"origin": "https://example.com/accesskeys/..."}'
+  -d '{"url": "https://example.com/accesskeys/..."}'
 
 $ curl -X POST $BASE_URL/accesskeys/import \
   -H 'Content-Type: application/json' \
-  -d '{"origin": "/path/to/accesskeys.json"}'
+  -d '{"url": "file:///path/to/accesskeys.json"}'
 ```
 
 Provides an interface for importing accesskeys.
 
 #### Parameters
 
-Key    | Required | Comment
----    | ----     | -------
-origin | `true`   | `https URL` or `filepath`
+Key | Type     | Comment
+--- | ----     | -------
+url | `string` | URL of accesskeys to import (supported schemes: `https` `file`)
 
 #### Returns
 
