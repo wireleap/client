@@ -578,6 +578,7 @@ Circuit settings can be configured [here](#the-config-object).
   "role": "backing",
   "address": "wireleap://relay3.example.com:13495",
   "pubkey": "bZ3ppgVRz3wPSsJy2o_1KRBrySCzOz9OHdxSwP0riCk",
+  "selectable": true,
   "versions": {
     "software": "0.5.1",
     "client-relay": "0.2.0",
@@ -587,12 +588,13 @@ Circuit settings can be configured [here](#the-config-object).
 
 #### Attributes
 
-Key      | Type     | Comment
----      | ----     | -------
-role     | `string` | Type of relay (`fronting`, `backing`, `entropic`)
-address  | `string` | Address of relay
-pubkey   | `string` | Public key of relay
-versions | `dict`   | Relay and interface versions
+Key        | Type     | Comment
+---        | ----     | -------
+role       | `string` | Type of relay (`fronting`, `backing`, `entropic`)
+address    | `string` | Address of relay
+pubkey     | `string` | Public key of relay
+selectable | `bool`   | Can be selected to be used in a circuit
+versions   | `dict`   | Relay and interface versions
 
 ### List all relays
 
