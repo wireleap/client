@@ -8,6 +8,6 @@ const VERSION_STRING = "0.0.1"
 
 var VERSION = semver.MustParse(VERSION_STRING)
 
-type VersionReply struct {
+type Version struct {
 	Version semver.Version `json:"version,omitempty"`
 }
