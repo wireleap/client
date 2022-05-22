@@ -24,7 +24,9 @@ func New(br *broker.T, l *log.Logger) *T {
 func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/version":
-		t.reply(w, VersionReply{VERSION})
+		t.reply(w, Version{VERSION})
+	case "/runtime":
+		t.reply(w, RuntimeReply)
 	case "/", "":
 		w.Write([]byte("hello world"))
 		t.l.Printf("just served %+v", r)

@@ -25,6 +25,7 @@ OUTDIR="$(realpath "$1")"
 
 SRCDIR="$(dirname "$(dirname "$(realpath "$0")")")"
 GITVERSION="$($SRCDIR/contrib/gitversion.sh)"
+GITCOMMIT="$(git rev-parse HEAD)"
 
 GOOS=${GOOS:-$(go env GOOS)}
 
@@ -56,6 +57,9 @@ cp "$SRCDIR/LICENSE" "$SRCDIR/sub/initcmd/embedded/"
 info "building ..."
 CGO_ENABLED=0 go build -tags "$BUILD_TAGS" -o "$OUTDIR/wireleap" -ldflags "
     -X github.com/wireleap/client/version.GITREV=$GITVERSION \
+    -X github.com/wireleap/client/version.GIT_COMMIT=$GITCOMMIT \
+    -X github.com/wireleap/client/version.BUILD_TIME=$(date +%s) \
+    -X github.com/wireleap/client/version.BUILD_FLAGS=$BUILD_FLAGS \
 "
 
 [ -z "$BUILD_USER" ] || chown -R "$BUILD_USER" "$OUTDIR"
