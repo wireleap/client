@@ -35,6 +35,8 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		t.reply(w, ci)
+	case "/config":
+		t.reply(w, t.br.Config())
 	case "/", "":
 		w.Write([]byte("hello world"))
 		t.l.Printf("just served %+v", r)

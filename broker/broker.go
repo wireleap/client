@@ -284,3 +284,5 @@ func (t *T) Shutdown() {
 	t.l.Println("gracefully shutting down...")
 	t.fd.Del(filenames.Pid)
 }
+
+func (t *T) Config() *clientcfg.C { return t.cfg }
