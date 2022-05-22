@@ -248,6 +248,11 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 	return
 }
 
+func (t *T) ContractInfo() (ci *contractinfo.T, err error) {
+	err = t.fd.Get(&ci, filenames.Contract)
+	return
+}
+
 func (t *T) Reload() {
 	t.l.Println("reloading config")
 	t.mu.Lock()
