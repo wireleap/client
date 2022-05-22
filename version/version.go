@@ -21,6 +21,12 @@ import (
 	"github.com/wireleap/common/cli/upgrade"
 )
 
+var BUILD_FLAGS string
+
+var BUILD_TIME string
+
+var GIT_COMMIT string
+
 // old name compat
 var GITREV string = "<unset>"
 
