@@ -27,6 +27,14 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		t.reply(w, Version{VERSION})
 	case "/runtime":
 		t.reply(w, RuntimeReply)
+	case "/contract":
+		ci, err := t.br.ContractInfo()
+		if err != nil {
+			t.l.Printf("could not obtain contract info: %s", err)
+			status.ErrInternal.WriteTo(w)
+			return
+		}
+		t.reply(w, ci)
 	case "/", "":
 		w.Write([]byte("hello world"))
 		t.l.Printf("just served %+v", r)
