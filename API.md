@@ -468,7 +468,7 @@ when needed (e.g., previous one has expired), or can be manually
 {
   "contract": "https://contract1.example.com",
   "duration": 86400,
-  "status": "active",
+  "state": "active",
   "expiration": 1651570846
 }
 ```
@@ -731,7 +731,7 @@ forwards the traffic via the controller connection broker.
   "address": "127.0.0.1:13491",
   "binary": {
     "ok": true,
-    "status": {
+    "state": {
       "exists": true,
       "chmod_x": true,
     }
@@ -741,13 +741,13 @@ forwards the traffic via the controller connection broker.
 
 #### Attributes
 
-Key           | Type     | Comment
----           | ----     | -------
-pid           | `int`    | PID of SOCKSv5 daemon
-state         | `string` | One of `active` `inactive` `activating` `deactivating` `failed` `unknown`
-address       | `string` | SOCKSv5 address
-binary.ok     | `bool`   | Whether SOCKSv5 binary passed all required verification checks
-binary.status | `dict`   | SOCKSv5 binary status verification checks results
+Key          | Type     | Comment
+---          | ----     | -------
+pid          | `int`    | PID of SOCKSv5 daemon
+state        | `string` | One of `active` `inactive` `activating` `deactivating` `failed` `unknown`
+address      | `string` | SOCKSv5 address
+binary.ok    | `bool`   | Whether SOCKSv5 binary passed all required verification checks
+binary.state | `dict`   | SOCKSv5 binary status verification checks results
 
 ### Get SOCKS information
 
@@ -857,7 +857,7 @@ controller connection broker by starting wireleap_tun.
   "address": "10.13.49.0:13492",
   "binary": {
     "ok": true,
-    "status": {
+    "state": {
       "exists": true,
       "chown_0": true,
       "chmod_x": true,
@@ -873,13 +873,13 @@ and verification checks.
 
 #### Attributes
 
-Key           | Type     | Comment
----           | ----     | -------
-pid           | `int`    | PID of TUN daemon
-state         | `string` | One of `active` `inactive` `activating` `deactivating` `failed` `unknown`
-address       | `string` | TUN device address
-binary.ok     | `bool`   | Whether TUN binary passed all required verification checks
-binary.status | `dict`   | TUN binary status verification checks results
+Key          | Type     | Comment
+---          | ----     | -------
+pid          | `int`    | PID of TUN daemon
+state        | `string` | One of `active` `inactive` `activating` `deactivating` `failed` `unknown`
+address      | `string` | TUN device address
+binary.ok    | `bool`   | Whether TUN binary passed all required verification checks
+binary.state | `dict`   | TUN binary status verification checks results
 
 ### Get TUN information
 
