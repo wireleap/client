@@ -5,20 +5,19 @@
 - [wireleap](#wireleap)
 - [wireleap init](#wireleap-init)
 - [wireleap config](#wireleap-config)
-- [wireleap import](#wireleap-import)
-- [wireleap servicekey](#wireleap-servicekey)
+- [wireleap accesskeys](#wireleap-accesskeys)
 - [wireleap start](#wireleap-start)
 - [wireleap status](#wireleap-status)
 - [wireleap reload](#wireleap-reload)
 - [wireleap restart](#wireleap-restart)
 - [wireleap stop](#wireleap-stop)
-- [wireleap exec](#wireleap-exec)
-- [wireleap intercept](#wireleap-intercept)
+- [wireleap log](#wireleap-log)
 - [wireleap tun](#wireleap-tun)
+- [wireleap socks](#wireleap-socks)
+- [wireleap intercept](#wireleap-intercept)
+- [wireleap exec](#wireleap-exec)
 - [wireleap upgrade](#wireleap-upgrade)
 - [wireleap rollback](#wireleap-rollback)
-- [wireleap info](#wireleap-info)
-- [wireleap log](#wireleap-log)
 - [wireleap version](#wireleap-version)
 
 ## wireleap 
@@ -29,22 +28,21 @@ Usage: wireleap COMMAND [OPTIONS]
 
 Commands:
   help          Display this help message or help on a command
-  init          Initialize wireleap directory
+  init          Initialize wireleap home directory
   config        Get or set wireleap configuration settings
-  import        Import accesskeys JSON and set up associated contract
-  servicekey    Trigger accesskey activation (accesskey.use_on_demand=false)
-  start         Start wireleap daemon (SOCKSv5/connection broker)
-  status        Report wireleap daemon status
-  reload        Reload wireleap daemon configuration
-  restart       Restart wireleap daemon
-  stop          Stop wireleap daemon
-  exec          Execute script from scripts directory
-  intercept     Run executable and redirect connections to wireleap daemon
-  tun           Control tun device
+  accesskeys    Manage accesskeys
+  start         Start wireleap controller daemon
+  status        Report wireleap controller daemon status
+  reload        Reload wireleap controller daemon configuration
+  restart       Restart wireleap controller daemon
+  stop          Stop wireleap controller daemon
+  log           Show wireleap controller daemon logs
+  tun           Control TUN device forwarder
+  socks         Control SOCKSv5 proxy forwarder
+  intercept     Run executable and redirect connections (req. SOCKS forwarder)
+  exec          Execute script from scripts directory (req. SOCKS forwarder)
   upgrade       Upgrade wireleap to the latest version per directory
   rollback      Undo a partially completed upgrade
-  info          Display some info and stats
-  log           Show wireleap logs
   version       Show version and exit
 
 Run 'wireleap help COMMAND' for more information on a command.
@@ -56,7 +54,7 @@ Run 'wireleap help COMMAND' for more information on a command.
 $ wireleap help init
 Usage: wireleap init [options]
 
-Initialize wireleap directory
+Initialize wireleap home directory
 
 Options:
   --force-unpack-only       Overwrite embedded files only
@@ -71,38 +69,30 @@ Usage: wireleap config [KEY [VALUE]]
 Get or set wireleap configuration settings
 
 Keys:
-  timeout                 (str)  Dial timeout duration
-  contract                (str)  Service contract associated with accesskeys
-  address.socks           (str)  SOCKS5 proxy address of wireleap daemon
-  address.h2c             (str)  H2C proxy address of wireleap daemon
-  address.tun             (str)  TUN device address (not loopback)
-  circuit.hops            (int)  Number of relay hops to use in a circuit
-  circuit.whitelist       (list) Whitelist of relays to use
-  accesskey.use_on_demand (bool) Activate accesskeys as needed
+  address                        (string) Controller address
+  broker.address                 (string) Override default broker address
+  broker.accesskey.use_on_demand (bool)   Activate accesskeys as needed
+  broker.circuit.timeout         (string) Dial timeout duration
+  broker.circuit.hops            (int)    Number of relays to use in a circuit
+  broker.circuit.whitelist       (list)   Relay addresses to use in circuit
+  forwarders.socks.address       (string) SOCKSv5 proxy address
+  forwarders.tun.address         (string) TUN device address (not loopback)
 
 To unset a key, specify `null` as the value
 ```
 
-## wireleap import
+## wireleap accesskeys
 
 ```
-$ wireleap help import
-Usage: wireleap import FILE|URL
+$ wireleap help accesskeys
+Usage: wireleap accesskeys COMMAND
 
-Import accesskeys JSON and set up associated contract
+Manage accesskeys
 
-Arguments:
-  FILE        Path to accesskeys file, or - to read standard input
-  URL         URL to download accesskeys (https required)
-```
-
-## wireleap servicekey
-
-```
-$ wireleap help servicekey
-Usage: wireleap servicekey
-
-Trigger accesskey activation (accesskey.use_on_demand=false)
+Commands:
+  list          List accesskeys
+  import        Import accesskeys from FILE|URL and set up associated contract
+  activate      Trigger accesskey activation (accesskey.use_on_demand=false)
 ```
 
 ## wireleap start
@@ -111,7 +101,7 @@ Trigger accesskey activation (accesskey.use_on_demand=false)
 $ wireleap help start
 Usage: wireleap start [options]
 
-Start wireleap daemon (SOCKSv5/connection broker)
+Start wireleap controller daemon
 
 Options:
   --fg  Run in foreground, don't detach
@@ -132,12 +122,13 @@ Environment:
 $ wireleap help status
 Usage: wireleap status
 
-Report wireleap daemon status
+Report wireleap controller daemon status
 
 Exit codes:
-  0     wireleap is running
-  1     wireleap is not running
-  2     could not tell if wireleap is running or not
+  0     wireleap controller is active
+  1     wireleap controller is inactive
+  2     wireleap controller is activating or deactivating
+  3     wireleap controller failed or state is unknown
 ```
 
 ## wireleap reload
@@ -146,7 +137,7 @@ Exit codes:
 $ wireleap help reload
 Usage: wireleap reload
 
-Reload wireleap daemon configuration
+Reload wireleap controller daemon configuration
 ```
 
 ## wireleap restart
@@ -155,7 +146,7 @@ Reload wireleap daemon configuration
 $ wireleap help restart
 Usage: wireleap restart
 
-Restart wireleap daemon
+Restart wireleap controller daemon
 ```
 
 ## wireleap stop
@@ -164,25 +155,16 @@ Restart wireleap daemon
 $ wireleap help stop
 Usage: wireleap stop
 
-Stop wireleap daemon
+Stop wireleap controller daemon
 ```
 
-## wireleap exec
+## wireleap log
 
 ```
-$ wireleap help exec
-Usage: wireleap exec FILENAME
+$ wireleap help log
+Usage: wireleap log
 
-Execute script from scripts directory
-```
-
-## wireleap intercept
-
-```
-$ wireleap help intercept
-Usage: wireleap intercept [args]
-
-Run executable and redirect connections to wireleap daemon
+Show wireleap controller daemon logs
 ```
 
 ## wireleap tun
@@ -201,6 +183,43 @@ Commands:
   log           Show wireleap_tun logs
 ```
 
+## wireleap socks
+
+```
+$ wireleap help socks
+Usage: wireleap socks COMMAND [OPTIONS]
+
+Control SOCKSv5 proxy forwarder
+
+Commands:
+  start         Start wireleap_socks daemon
+  stop          Stop wireleap_socks daemon
+  status        Report wireleap_socks daemon status
+  restart       Restart wireleap_socks daemon
+  log           Show wireleap_socks logs
+```
+
+## wireleap intercept
+
+```
+$ wireleap help intercept
+Usage: wireleap intercept [args]
+
+Run executable and redirect connections (req. SOCKS forwarder)
+```
+
+## wireleap exec
+
+```
+$ wireleap help exec
+Usage: wireleap exec COMMAND|FILENAME
+
+Execute script from scripts directory (req. SOCKS forwarder)
+
+Commands:
+  list          List available scripts in scripts directory
+```
+
 ## wireleap upgrade
 
 ```
@@ -217,24 +236,6 @@ $ wireleap help rollback
 Usage: wireleap rollback
 
 Undo a partially completed upgrade
-```
-
-## wireleap info
-
-```
-$ wireleap help info
-Usage: wireleap info
-
-Display some info and stats
-```
-
-## wireleap log
-
-```
-$ wireleap help log
-Usage: wireleap log
-
-Show wireleap logs
 ```
 
 ## wireleap version
