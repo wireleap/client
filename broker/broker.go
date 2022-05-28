@@ -25,6 +25,7 @@ import (
 	"github.com/wireleap/common/api/interfaces/clientdir"
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/relaylist"
+	"github.com/wireleap/common/api/servicekey"
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/upgrade"
@@ -48,6 +49,8 @@ type T struct {
 	*transport.T
 	// broker prefix logger
 	l *log.Logger
+	// accesskey manager
+	AKM *AKManager
 }
 
 func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
@@ -61,6 +64,10 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 		l:     l,
 	}
 	var err error
+	t.AKM, err = NewAKManager(t.fd, t.cfg, t.cl)
+	if err != nil {
+		t.l.Fatal("could not initialize accesskey manager: %s", err)
+	}
 	if cfg.Broker.Address == nil {
 		t.l.Fatal("broker.address is nil in config, please set it")
 	}
@@ -156,9 +163,8 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sks := clientlib.SKSource(t.fd, t.cfg, t.cl)
 	dialer := clientlib.CircuitDialer(
-		clientlib.AlwaysFetch(sks),
+		func() (*servicekey.T, error) { return t.AKM.Get(true) },
 		t.Circuit,
 		dialf,
 	)
