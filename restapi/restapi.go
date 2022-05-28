@@ -57,7 +57,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.WriteTo(w)
 				return
 			}
-			air := accesskeyImportRequest{}
+			air := AccesskeyImportRequest{}
 			if err = json.Unmarshal(b, &air); err != nil || air.URL == nil {
 				t.l.Printf("error when unmarshaling accesskeys import request: %s", err)
 				status.ErrRequest.WriteTo(w)
@@ -78,7 +78,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 	return
 }
 
-type accesskeyImportRequest struct {
+type AccesskeyImportRequest struct {
 	URL *texturl.URL `json:"url"`
 }
 
