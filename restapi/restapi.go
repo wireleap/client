@@ -66,6 +66,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.WriteTo(w)
 				return
 			}
+			status.OK.WriteTo(w)
 		}),
 	}))
 	t.mux.Handle("/accesskeys/activate", provide.MethodGate(provide.Routes{
@@ -75,6 +76,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.WriteTo(w)
 				return
 			}
+			status.OK.WriteTo(w)
 		}),
 	}))
 	// catch-all handler for unrouted paths
