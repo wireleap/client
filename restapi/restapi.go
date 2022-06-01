@@ -9,8 +9,10 @@ import (
 	"net/http"
 
 	"github.com/wireleap/client/broker"
+	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/common/api/provide"
 	"github.com/wireleap/common/api/status"
+	"github.com/wireleap/common/cli/process"
 )
 
 // api server stub
@@ -77,6 +79,41 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				return
 			}
 			status.OK.WriteTo(w)
+		}),
+	}))
+	t.mux.Handle("/status", provide.MethodGate(provide.Routes{
+		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var (
+				err   error
+				pid   int
+				state string
+			)
+
+			// TODO increase number of detectable states
+			if err = t.br.Fd.Get(&pid, filenames.Pid); err != nil {
+				pid = 0
+				state = "inactive"
+			} else {
+				if process.Exists(pid) {
+					state = "active"
+				} else {
+					state = "inactive"
+				}
+			}
+
+			circList := []string{}
+			for _, r := range t.br.ActiveCircuit() {
+				circList = append(circList, r.Addr.String())
+			}
+
+			t.reply(w, statusReply{
+				Home:   "/",
+				Pid:    pid,
+				State:  state,
+				Broker: statusBroker{ActiveCircuit: circList},
+				// TODO FIXME
+				Upgrade: statusUpgrade{Required: false},
+			})
 		}),
 	}))
 	// catch-all handler for unrouted paths

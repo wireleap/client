@@ -36,7 +36,7 @@ import (
 )
 
 type T struct {
-	fd    fsdir.T
+	Fd    fsdir.T
 	cfg   *clientcfg.C
 	cl    *client.Client
 	cache *dnscachedial.Control
@@ -55,7 +55,7 @@ type T struct {
 
 func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 	t := &T{
-		fd: fd,
+		Fd: fd,
 		cl: client.New(nil, clientcontract.T, clientdir.T),
 		// cache dns resolution in netstack transport
 		cache: dnscachedial.New(),
@@ -64,7 +64,7 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 		l:     l,
 	}
 	var err error
-	t.AKM, err = NewAKManager(t.fd, t.cfg, t.cl)
+	t.AKM, err = NewAKManager(t.Fd, t.cfg, t.cl)
 	if err != nil {
 		t.l.Fatal("could not initialize accesskey manager: %s", err)
 	}
@@ -74,7 +74,7 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 	t.T.Transport.DialContext = t.cache.Cover(t.T.Transport.DialContext)
 	t.T.Transport.DialTLSContext = t.cache.Cover(t.T.Transport.DialTLSContext)
 	t.cl.Transport = t.T.Transport
-	if clientlib.ContractURL(t.fd) != nil {
+	if clientlib.ContractURL(t.Fd) != nil {
 		// cache dns, sc and directory data if we can
 		var (
 			di dirinfo.T
@@ -95,7 +95,7 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 		if err = t.writeBypass(t.cache.Get(di.Endpoint.Hostname())...); err != nil {
 			t.l.Fatalf(
 				"could not write first bypass file %s: %s",
-				t.fd.Path(filenames.Bypass), err,
+				t.Fd.Path(filenames.Bypass), err,
 			)
 		}
 	}
@@ -137,6 +137,8 @@ func (t *T) Circuit() (r []*relayentry.T, err error) {
 	err = t.writeBypass(t.cache.Get(r[0].Addr.Hostname())...)
 	return
 }
+
+func (t *T) ActiveCircuit() (r circuit.T) { return t.circ }
 
 func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
@@ -203,13 +205,13 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // write bypass.json file
 func (t *T) writeBypass(extra ...string) error {
 	// expose bypass for wireleap_tun
-	sc := t.cache.Get(clientlib.ContractURL(t.fd).Hostname())
+	sc := t.cache.Get(clientlib.ContractURL(t.Fd).Hostname())
 	bypass := append(sc, extra...)
-	return t.fd.Set(bypass, filenames.Bypass)
+	return t.Fd.Set(bypass, filenames.Bypass)
 }
 
 func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error) {
-	sc := clientlib.ContractURL(t.fd)
+	sc := clientlib.ContractURL(t.Fd)
 	if sc == nil {
 		err = fmt.Errorf("contract is not defined")
 		return
@@ -228,7 +230,7 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 	// maybe there's an upgrade available?
 	if di.UpgradeChannels.Client != nil {
 		if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
-			skipv := upgrade.NewConfig(t.fd, "wireleap", false).SkippedVersion()
+			skipv := upgrade.NewConfig(t.Fd, "wireleap", false).SkippedVersion()
 			if skipv != nil && skipv.EQ(v) {
 				t.l.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
 				t.l.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
@@ -247,7 +249,7 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 		)
 		return
 	}
-	if err = clientlib.SaveContractInfo(t.fd, ci, rl); err != nil {
+	if err = clientlib.SaveContractInfo(t.Fd, ci, rl); err != nil {
 		err = fmt.Errorf("could not save contract info: %w", err)
 		return
 	}
@@ -255,7 +257,7 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 }
 
 func (t *T) ContractInfo() (ci *contractinfo.T, err error) {
-	err = t.fd.Get(&ci, filenames.Contract)
+	err = t.Fd.Get(&ci, filenames.Contract)
 	return
 }
 
@@ -265,7 +267,7 @@ func (t *T) Reload() {
 	defer t.mu.Unlock()
 
 	cfg := clientcfg.Defaults()
-	err := t.fd.Get(&cfg, filenames.Config)
+	err := t.Fd.Get(&cfg, filenames.Config)
 	if err != nil {
 		t.l.Printf(
 			"could not reload config: %s, aborting reload",
@@ -288,7 +290,7 @@ func (t *T) Reload() {
 
 func (t *T) Shutdown() {
 	t.l.Println("gracefully shutting down...")
-	t.fd.Del(filenames.Pid)
+	t.Fd.Del(filenames.Pid)
 }
 
 func (t *T) Config() *clientcfg.C { return t.cfg }
