@@ -68,6 +68,15 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			}
 		}),
 	}))
+	t.mux.Handle("/accesskeys/activate", provide.MethodGate(provide.Routes{
+		http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := t.br.AKM.Activate(); err != nil {
+				t.l.Printf("error when activating new accesskey: %s", err)
+				status.ErrRequest.WriteTo(w)
+				return
+			}
+		}),
+	}))
 	// catch-all handler for unrouted paths
 	t.mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.l.Printf("%s just served %+v", r.URL.Path, r)
