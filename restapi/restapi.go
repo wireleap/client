@@ -116,6 +116,12 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			})
 		}),
 	}))
+	t.mux.Handle("/reload", provide.MethodGate(provide.Routes{
+		http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			t.br.Reload()
+			status.OK.WriteTo(w)
+		}),
+	}))
 	// catch-all handler for unrouted paths
 	t.mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.l.Printf("%s just served %+v", r.URL.Path, r)
