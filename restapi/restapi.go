@@ -7,12 +7,10 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/wireleap/client/broker"
 	"github.com/wireleap/common/api/provide"
 	"github.com/wireleap/common/api/status"
-	"github.com/wireleap/common/api/texturl"
 )
 
 // api server stub
@@ -75,46 +73,6 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 		t.l.Printf("%s just served %+v", r.URL.Path, r)
 		http.NotFound(w, r)
 	}))
-	return
-}
-
-type AccesskeyImportRequest struct {
-	URL *texturl.URL `json:"url"`
-}
-
-type accesskeyReply struct {
-	Contract   *texturl.URL `json:"contract"`
-	Duration   int64        `json:"duration"`
-	State      string       `json:"state"`
-	Expiration int64        `json:"expiration"`
-}
-
-func (t *T) newAccesskeysReply() (rs []*accesskeyReply) {
-	ci, err := t.br.ContractInfo()
-	if err != nil {
-		return
-	}
-	// get contract info
-	if sk := t.br.AKM.CurrentSK(); sk != nil {
-		state := "active"
-		if sk.IsExpiredAt(time.Now().Unix()) {
-			state = "expired"
-		}
-		rs = append(rs, &accesskeyReply{
-			Contract:   ci.Endpoint,
-			Duration:   int64(ci.Servicekey.Duration),
-			State:      state,
-			Expiration: sk.Contract.SettlementOpen,
-		})
-	}
-	for _, p := range t.br.AKM.CurrentPofs() {
-		rs = append(rs, &accesskeyReply{
-			Contract:   ci.Endpoint,
-			Duration:   int64(ci.Servicekey.Duration),
-			State:      "inactive",
-			Expiration: p.Expiration,
-		})
-	}
 	return
 }
 
