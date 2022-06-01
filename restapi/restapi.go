@@ -5,6 +5,7 @@ package restapi
 import (
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -120,6 +121,17 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 		http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.br.Reload()
 			status.OK.WriteTo(w)
+		}),
+	}))
+	t.mux.Handle("/log", provide.MethodGate(provide.Routes{
+		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			logfile := t.br.Fd.Path(filenames.Log)
+			b, err := ioutil.ReadFile(logfile)
+			if err != nil {
+				status.ErrRequest.WriteTo(w)
+				return
+			}
+			w.Write(b)
 		}),
 	}))
 	// catch-all handler for unrouted paths
