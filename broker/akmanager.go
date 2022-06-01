@@ -315,5 +315,77 @@ func (t *AKManager) PickPofs() (r []*pof.T) {
 	return r
 }
 
+func (t *AKManager) Activate() (err error) {
+	switch {
+	case clientlib.ContractURL(t.fm) == nil:
+		return fmt.Errorf("contract has to be set")
+	case t.c.Broker.Accesskey.UseOnDemand:
+		return fmt.Errorf("accesskey.use_on_demand is enabled in config.json; refusing to run")
+	}
+
+	var ps []*pof.T
+	err = t.fm.Get(&ps, "pofs.json")
+
+	if err != nil {
+		return fmt.Errorf("could not read pofs from pofs.json: %s", err)
+	}
+
+	sk := &servicekey.T{}
+	err = t.fm.Get(sk, filenames.Servicekey)
+
+	if err != nil {
+		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrNotExist) {
+			// this is fine
+		} else {
+			return fmt.Errorf(
+				"error reading old %s",
+				filenames.Servicekey,
+			)
+		}
+	} else {
+		if !sk.IsExpiredAt(time.Now().Unix()) {
+			return fmt.Errorf(
+				"refusing to replace non-expired servicekey: %s expires at %s",
+				filenames.Servicekey,
+				time.Unix(sk.Contract.SettlementOpen, 0).String(),
+			)
+		}
+	}
+
+	// discard old servicekey & get a new one
+	sk, err = t.RefreshSK()
+
+	if err != nil {
+		return fmt.Errorf(
+			"error while activating servicekey with pof: %s",
+			err,
+		)
+	}
+
+	err = t.fm.Set(sk, filenames.Servicekey)
+
+	if err != nil {
+		return fmt.Errorf(
+			"could not write new servicekey: %s",
+			err,
+		)
+	}
+
+	// reload wireleap daemon if possible
+	var pid int
+	err = t.fm.Get(&pid, filenames.Pid)
+
+	// if not, it's no big deal -- still let the user know
+	if err != nil {
+		log.Printf(
+			"could not send SIGUSR1 to running wireleap daemon: %s",
+			err,
+		)
+	}
+
+	process.Reload(pid)
+	return
+}
+
 func (t *AKManager) CurrentSK() *servicekey.T { return t.sk }
 func (t *AKManager) CurrentPofs() []*pof.T    { return t.pofs }
