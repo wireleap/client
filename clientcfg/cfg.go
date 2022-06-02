@@ -35,7 +35,7 @@ type Broker struct {
 type Accesskey struct {
 	// UseOnDemand sets whether pofs are used to generate new servicekeys
 	// automatically.
-	UseOnDemand bool `json:"use_on_demand,omitempty"`
+	UseOnDemand bool `json:"use_on_demand"`
 }
 
 // Circuit describes the configuration of the Wireleap connection circuit.
