@@ -30,6 +30,26 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 	}))
 	t.mux.Handle("/config", provide.MethodGate(provide.Routes{
 		http.MethodGet: t.replyHandler(t.br.Config()),
+		http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.l.Printf("could not read POST /config request body: %s", err)
+				status.ErrRequest.WriteTo(w)
+				return
+			}
+			if err = json.Unmarshal(b, t.br.Config()); err != nil {
+				t.l.Printf("could not unmarshal POST /config request body: %s", err)
+				status.ErrRequest.WriteTo(w)
+				return
+			}
+			if err = t.br.SaveConfig(); err != nil {
+				t.l.Printf("could not save config changes: %s", err)
+				status.ErrInternal.WriteTo(w)
+				return
+			}
+			t.br.Reload()
+			status.OK.WriteTo(w)
+		}),
 	}))
 	t.mux.Handle("/runtime", provide.MethodGate(provide.Routes{
 		http.MethodGet: t.replyHandler(RuntimeReply),
