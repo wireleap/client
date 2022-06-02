@@ -294,3 +294,5 @@ func (t *T) Shutdown() {
 }
 
 func (t *T) Config() *clientcfg.C { return t.cfg }
+
+func (t *T) SaveConfig() error { return t.Fd.Set(&t.cfg, filenames.Config) }
