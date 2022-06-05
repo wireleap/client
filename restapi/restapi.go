@@ -154,6 +154,8 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			w.Write(b)
 		}),
 	}))
+	t.registerForwarder("socks")
+	t.registerForwarder("tun")
 	// catch-all handler for unrouted paths
 	t.mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.l.Printf("%s just served %+v", r.URL.Path, r)
