@@ -36,6 +36,10 @@ type binaryState struct {
 	ChmodUS bool `json:"chmod_us"`
 }
 
+type FwderState struct {
+	State string `json:"state"`
+}
+
 func (t *T) getBinaryState(bin string) (st binaryState) {
 	fi, err := os.Stat(t.br.Fd.Path(bin))
 	if err != nil {
