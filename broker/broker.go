@@ -104,6 +104,11 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 
 type DialFunc func(string, string) (net.Conn, error)
 
+func (t *T) Relays() (rs relaylist.T, err error) {
+	err = t.Fd.Get(&rs, "relays.json")
+	return
+}
+
 func (t *T) Circuit() (r []*relayentry.T, err error) {
 	// use existing if available
 	t.mu.Lock()
