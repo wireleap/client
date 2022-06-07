@@ -18,10 +18,10 @@ import (
 const fwderPrefix = "wireleap_"
 
 type fwderReply struct {
-	Pid     int    `json:"pid"`
-	State   string `json:"state"`
-	Address string `json:"address"`
-	Binary  binaryReply
+	Pid     int         `json:"pid"`
+	State   string      `json:"state"`
+	Address string      `json:"address"`
+	Binary  binaryReply `json:"binary"`
 }
 
 type binaryReply struct {
