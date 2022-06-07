@@ -18,8 +18,6 @@ import (
 	"github.com/wireleap/common/cli/fsdir"
 )
 
-const Available = true
-
 const name = "tun"
 
 const bin = "wireleap_" + name
