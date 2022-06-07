@@ -65,6 +65,17 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			t.reply(w, ci)
 		}),
 	}))
+	t.mux.Handle("/relays", provide.MethodGate(provide.Routes{
+		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rs, err := t.br.Relays()
+			if err != nil {
+				t.l.Printf("error %s while serving relays", err)
+				status.ErrInternal.WriteTo(w)
+				return
+			}
+			t.reply(w, rs)
+		}),
+	}))
 	t.mux.Handle("/accesskeys", provide.MethodGate(provide.Routes{
 		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.reply(w, t.newAccesskeysReply())
