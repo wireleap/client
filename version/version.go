@@ -28,7 +28,7 @@ var BUILD_TIME string
 var GIT_COMMIT string
 
 // old name compat
-var GITREV string = "<unset>"
+var GITREV string = "0.0.0-UNSET-VERSION"
 
 // VERSION_STRING is the current version string, set by the linker via go build
 // -X flag.
