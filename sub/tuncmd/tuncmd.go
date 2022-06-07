@@ -86,7 +86,7 @@ func Cmd() (r *cli.Subcmd) {
 			fmt.Println(string(st))
 			return
 		}
-		fmt.Printf("error while calling %s: %s", url, err)
+		fmt.Printf("error while calling %s: %s\n", url, err)
 		os.Exit(1)
 	}
 	return
