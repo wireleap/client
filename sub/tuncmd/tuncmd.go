@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"text/tabwriter"
 
 	"github.com/wireleap/client/clientcfg"
@@ -19,11 +20,13 @@ import (
 
 const Available = true
 
-const bin = "wireleap_tun"
+const name = "tun"
+
+const bin = "wireleap_" + name
 
 func Cmd() (r *cli.Subcmd) {
 	r = &cli.Subcmd{
-		FlagSet: flag.NewFlagSet("tun", flag.ExitOnError),
+		FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
 		Desc:    "Control tun device",
 		Sections: []cli.Section{{
 			Title: "Commands",
@@ -49,27 +52,42 @@ func Cmd() (r *cli.Subcmd) {
 			log.Fatal(err)
 		}
 		cl := client.New(nil)
-		var st json.RawMessage
-
+		var (
+			st   json.RawMessage
+			meth = http.MethodGet
+			url  = "http://" + *c.Address + "/api/forwarders/" + name
+		)
 		switch cmd {
 		case "status":
-			cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/forwarders/tun", nil, &st)
+			// url defined above is usable as-is
 		case "start":
-			cl.Perform(http.MethodPost, "http://"+*c.Address+"/api/forwarders/tun/start", nil, &st)
+			meth = http.MethodPost
+			url += "/start"
 		case "stop":
-			cl.Perform(http.MethodPost, "http://"+*c.Address+"/api/forwarders/tun/stop", nil, &st)
+			meth = http.MethodPost
+			url += "/stop"
 		case "restart":
-			cl.Perform(http.MethodPost, "http://"+*c.Address+"/api/forwarders/tun/start", nil, &st)
-			log.Println(st)
-			cl.Perform(http.MethodPost, "http://"+*c.Address+"/api/forwarders/tun/stop", nil, &st)
-			log.Println(st)
+			meth = http.MethodPost
+			url += "/start"
+			// specially handled below
 		case "log":
-			cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/forwarders/tun/log", nil, &st)
+			url += "/log"
 		default:
-			log.Fatalf("unknown tun subcommand: %s", cmd)
+			log.Fatalf("unknown %s subcommand: %s", name, cmd)
 		}
-
-		log.Println(string(st))
+		if err = cl.Perform(meth, url, nil, &st); err == nil {
+			if cmd == "restart" {
+				url = "http://" + *c.Address + "/api/forwarders/" + name + "/stop"
+				if err = cl.Perform(meth, url, nil, &st); err == nil {
+					fmt.Println(string(st))
+					return
+				}
+			}
+			fmt.Println(string(st))
+			return
+		}
+		fmt.Printf("error while calling %s: %s", url, err)
+		os.Exit(1)
 	}
 	return
 }
