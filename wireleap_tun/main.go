@@ -3,8 +3,10 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -13,17 +15,57 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/client/wireleap_tun/netsetup"
 	"github.com/wireleap/client/wireleap_tun/tun"
+	"github.com/wireleap/common/api/provide"
+	"github.com/wireleap/common/api/status"
 
 	"net/http"
 	_ "net/http/pprof"
 )
 
+const StateSock = "wireleap_socks.sock"
+
+func unixServer(p string, rts provide.Routes) error {
+	if err := os.RemoveAll(p); err != nil {
+		return err
+	}
+	l, err := net.Listen("unix", p)
+	if err != nil {
+		return err
+	}
+	defer l.Close()
+	mux := provide.NewMux(rts)
+	h := &http.Server{Handler: mux}
+	return h.Serve(l)
+}
+
 func main() {
+	// set up state API
+	state := "activating"
+	go func() {
+		err := unixServer(StateSock, provide.Routes{"/state": provide.MethodGate(provide.Routes{
+			http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				st := restapi.FwderState{State: state}
+				b, err := json.Marshal(st)
+				if err != nil {
+					log.Printf("error while serving /state reply: %s", err)
+					status.ErrInternal.WriteTo(w)
+					return
+				}
+				w.Write(b)
+			}),
+		})})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 	if err := syscall.Seteuid(0); err != nil {
 		log.Fatal("could not gain privileges; check if setuid flag is set?")
 	}
+	sig := make(chan os.Signal)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	sh := os.Getenv("WIRELEAP_HOME")
 	h2caddr := os.Getenv("WIRELEAP_ADDR_H2C")
 	tunaddr := os.Getenv("WIRELEAP_ADDR_TUN")
@@ -62,8 +104,6 @@ func main() {
 		os.Remove(pidfile)
 	}
 	defer finalize()
-	sig := make(chan os.Signal)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	os.Remove(pidfile)
 	pidtext := []byte(strconv.Itoa(os.Getpid()))
 	err = ioutil.WriteFile(pidfile, pidtext, 0644)
@@ -96,13 +136,16 @@ func main() {
 	if err = tunsplice(t, h2caddr, tunaddr); err != nil {
 		log.Fatal("tunsplice returned error:", err)
 	}
+	state = "active"
 	for {
 		select {
 		case s := <-sig:
-			finalize()
-			log.Fatalf("terminating on signal %s", s)
+			state = "deactivating"
+			log.Printf("terminating on signal %s", s)
+			return
 		case _, ok := <-watcher.Events:
 			if !ok {
+				state = "failed"
 				return
 			}
 			if err = rts.Down(); err != nil {
@@ -113,6 +156,7 @@ func main() {
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
+				state = "failed"
 				return
 			}
 			log.Println("error while watching files:", err)
