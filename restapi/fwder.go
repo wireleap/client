@@ -1,15 +1,19 @@
 package restapi
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 	"time"
 
+	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/provide"
 	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/cli/process"
@@ -55,21 +59,38 @@ func (t *T) getBinaryState(bin string) (st binaryState) {
 }
 
 func (t *T) registerForwarder(name string) {
-	bin := fwderPrefix + name
-	t.mux.Handle("/forwarders/"+name, provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		o := fwderReply{
+	var (
+		bin = fwderPrefix + name
+		o   = fwderReply{
 			Pid:     -1,
-			State:   "inactive",
+			State:   "unknown",
 			Address: "0.0.0.0:0",
 			Binary: binaryReply{
 				Ok: false,
 			},
 		}
-		if t.br.Fd.Get(&o.Pid, bin+".pid"); o.Pid != -1 && process.Exists(o.Pid) {
-			o.State = "active"
+		mu sync.Mutex
+		cl = client.New(nil)
+	)
+	cl.SetTransport(&http.Transport{
+		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+			return net.Dial("unix", bin+".sock")
+		},
+	})
+	t.mux.Handle("/forwarders/"+name, provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var fst FwderState
+		if err := cl.Perform(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
+			mu.Lock()
+			o.State = fst.State
+			mu.Unlock()
+		} else {
+			mu.Lock()
+			o.State = "failed"
+			mu.Unlock()
 		}
 		st := t.getBinaryState(bin)
 		// TODO can this be handled in a better way?
+		mu.Lock()
 		switch name {
 		case "socks":
 			o.Address = *t.br.Config().Forwarders.Socks
@@ -79,6 +100,7 @@ func (t *T) registerForwarder(name string) {
 			o.Binary.Ok = st.Exists && st.ChmodX && st.Chown0 && st.ChmodUS
 		}
 		o.Binary.State = st
+		mu.Unlock()
 		t.reply(w, o)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/start", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +158,9 @@ func (t *T) registerForwarder(name string) {
 			Stderr: logfile,
 		}
 		if err = cmd.Start(); err != nil {
+			mu.Lock()
+			o.State = "failed"
+			mu.Unlock()
 			err = fmt.Errorf("could not spawn background %s process: %s", bin, err)
 			return
 		}
@@ -144,23 +169,18 @@ func (t *T) registerForwarder(name string) {
 			bin, cmd.Process.Pid, logpath,
 		)
 		t.br.Fd.Set(cmd.Process.Pid, bin+".pid")
-		// wait for 2s and see if it's still alive
-		e := make(chan error)
-		go func() { e <- cmd.Wait() }()
-		select {
-		case <-e:
-			log.Printf("%s is not running, %s follows:", bin, logpath)
-		case <-time.NewTimer(time.Second * 2).C:
-			log.Printf("%s spawned succesfully", bin)
-		}
-		return
-		err = syscall.Exec(binpath, nil, env)
-		hint := ""
-		if os.IsPermission(err) {
-			hint = ", check permissions (owned by 0:0, executable bit/+x, setuid/+s)?"
-		}
-		if err != nil {
-			err = fmt.Errorf("could not execute %s: %s%s", binpath, err, hint)
+		// poll state until it's conclusive
+		var fst FwderState
+		for i := 0; i < 10; i++ {
+			if err = cl.Perform(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
+				mu.Lock()
+				o.State = fst.State
+				mu.Unlock()
+			} else {
+				mu.Lock()
+				o.State = "failed"
+				mu.Unlock()
+			}
 		}
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/stop", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
