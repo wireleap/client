@@ -5,14 +5,21 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/client/socks"
+	"github.com/wireleap/common/api/provide"
+	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/wlnet"
 	"github.com/wireleap/common/wlnet/h2conn"
 	"golang.org/x/net/http2"
@@ -157,7 +164,46 @@ func ProxyUDP(l net.PacketConn, dialer DialFunc) {
 	}
 }
 
+const StateSock = "wireleap_socks.sock"
+
+func unixServer(p string, rts provide.Routes) error {
+	if err := os.RemoveAll(p); err != nil {
+		return err
+	}
+	l, err := net.Listen("unix", p)
+	if err != nil {
+		return err
+	}
+	defer l.Close()
+	mux := provide.NewMux(rts)
+	h := &http.Server{Handler: mux}
+	return h.Serve(l)
+}
+
 func main() {
+	// set up state API
+	state := "activating"
+	go func() {
+		err := unixServer(StateSock, provide.Routes{"/state": provide.MethodGate(provide.Routes{
+			http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				st := restapi.FwderState{State: state}
+				b, err := json.Marshal(st)
+				if err != nil {
+					log.Printf("error while serving /state reply: %s", err)
+					status.ErrInternal.WriteTo(w)
+					return
+				}
+				w.Write(b)
+			}),
+		})})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+	// set up graceful signal handling
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	var ok bool
 	var h2caddr, socksaddr string
 
@@ -167,12 +213,15 @@ func main() {
 	if socksaddr, ok = os.LookupEnv("WIRELEAP_ADDR_SOCKS"); !ok {
 		log.Fatal("WIRELEAP_ADDR_SOCKS is not defined")
 	}
-
 	h2caddr = "http://" + h2caddr
 	if err := ListenSOCKS(socksaddr, dialFuncTo(h2caddr)); err != nil {
 		log.Fatalf("listening on socks5://%s failed: %s", socksaddr, err)
 	}
-
-	log.Printf("listening for SOCKSv5 connections on %s", socksaddr)
-	select {}
+	log.Printf("listening for SOCKSv5 connections on %s, state queries on %s", socksaddr, StateSock)
+	state = "active"
+	select {
+	case <-sigs:
+		state = "deactivating"
+		log.Printf("shutting down gracefully...")
+	}
 }
