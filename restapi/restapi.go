@@ -121,12 +121,11 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				circList = append(circList, r.Addr.String())
 			}
 			t.reply(w, statusReply{
-				Home:   t.br.Fd.Path(),
-				Pid:    os.Getpid(),
-				State:  "active",
-				Broker: statusBroker{ActiveCircuit: circList},
-				// TODO FIXME
-				Upgrade: statusUpgrade{Required: false},
+				Home:    t.br.Fd.Path(),
+				Pid:     os.Getpid(),
+				State:   "active",
+				Broker:  statusBroker{ActiveCircuit: circList},
+				Upgrade: statusUpgrade{Required: t.br.IsUpgradeable()},
 			})
 		}),
 	}))

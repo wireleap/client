@@ -148,6 +148,7 @@ func (t *T) Import(url string) (err error) {
 	// maybe there's an upgrade available?
 	if di.UpgradeChannels.Client != nil {
 		if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
+			t.SetUpgradeable(true)
 			t.l.Printf(
 				"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
 				v, version.VERSION,
