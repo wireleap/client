@@ -95,17 +95,18 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.WriteTo(w)
 				return
 			}
-			if err = t.br.AKM.Import(air.URL.String()); err != nil {
+			if err = t.br.Import(air.URL.String()); err != nil {
 				t.l.Printf("error when importing accesskeys: %s", err)
 				status.ErrRequest.WriteTo(w)
 				return
 			}
+			t.br.Reload()
 			status.OK.WriteTo(w)
 		}),
 	}))
 	t.mux.Handle("/accesskeys/activate", provide.MethodGate(provide.Routes{
 		http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if err := t.br.AKM.Activate(); err != nil {
+			if err := t.br.Activate(); err != nil {
 				t.l.Printf("error when activating new accesskey: %s", err)
 				status.ErrRequest.WriteTo(w)
 				return
