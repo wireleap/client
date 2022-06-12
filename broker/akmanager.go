@@ -1,3 +1,5 @@
+// Copyright (c) 2022 Wireleap
+
 package broker
 
 import (
@@ -9,50 +11,22 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/blang/semver"
-	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/version"
 	"github.com/wireleap/common/api/accesskey"
-	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
-	"github.com/wireleap/common/api/interfaces/clientcontract"
 	"github.com/wireleap/common/api/pof"
 	"github.com/wireleap/common/api/servicekey"
 	"github.com/wireleap/common/api/status"
-	"github.com/wireleap/common/cli/fsdir"
-	"github.com/wireleap/common/cli/process"
 )
 
-type AKManager struct {
-	c  *clientcfg.C
-	cl *client.Client
-	fm fsdir.T
-	mu sync.Mutex
-
-	sk   *servicekey.T
-	pofs []*pof.T
-}
-
-func NewAKManager(fm fsdir.T, c *clientcfg.C, cl *client.Client) (t *AKManager, err error) {
-	t = &AKManager{c: c, fm: fm, cl: cl}
-	if err = t.fm.Get(&t.pofs, filenames.Pofs); err != nil {
-		if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrNotExist) {
-			err = fmt.Errorf("could not get previous pofs: %w", err)
-		}
-	}
-	return
-}
-
-func download(url string) ([]byte, error) {
+func (t *T) download(url string) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -68,33 +42,29 @@ func download(url string) ([]byte, error) {
 			url, res.StatusCode, res.Status,
 		)
 	}
-	log.Printf("Downloading %s...", url)
+	t.l.Printf("Downloading %s...", url)
 	return io.ReadAll(res.Body)
 }
 
-func (t *AKManager) Import(url string) (err error) {
+func (t *T) Import(url string) (err error) {
 	data := []byte{}
 
 	switch {
 	case strings.HasPrefix(url, "http://"):
 		return fmt.Errorf("HTTP import URLs are vulnerable to MitM attacks. Use HTTPS instead.")
 	case strings.HasPrefix(url, "https://"):
-		data, err = download(url)
+		data, err = t.download(url)
 	default:
 		data, err = ioutil.ReadFile(url)
 	}
-
 	if err != nil {
 		return fmt.Errorf("could not read accesskey file: %s", err)
 	}
-
 	ak := &accesskey.T{}
 	err = json.Unmarshal(data, &ak)
-
 	if err != nil {
 		return fmt.Errorf("could not unmarshal accesskey file: ", err)
 	}
-
 	switch {
 	case ak == nil,
 		ak.Version == nil,
@@ -104,7 +74,6 @@ func (t *AKManager) Import(url string) (err error) {
 		ak.Contract.PublicKey == nil:
 		return fmt.Errorf("malformed accesskey file")
 	}
-
 	if ak.Version.Minor != accesskey.VERSION.Minor {
 		return fmt.Errorf(
 			"incompatible accesskey version: %s, expected 0.%d.x",
@@ -112,8 +81,7 @@ func (t *AKManager) Import(url string) (err error) {
 			accesskey.VERSION.Minor,
 		)
 	}
-
-	sc0 := clientlib.ContractURL(t.fm)
+	sc0 := clientlib.ContractURL(t.Fd)
 	if sc0 != nil && *sc0 != *ak.Contract.Endpoint {
 		return fmt.Errorf(
 			"you are trying to import accesskeys for a contract %s different from the currently defined %s; please set up a separate wireleap directory for your %s needs and import %s accesskeys there",
@@ -124,8 +92,7 @@ func (t *AKManager) Import(url string) (err error) {
 		)
 	}
 
-	cl := client.New(nil, clientcontract.T)
-	ci, d, err := clientlib.GetContractInfo(cl, ak.Contract.Endpoint)
+	ci, d, err := clientlib.GetContractInfo(t.cl, ak.Contract.Endpoint)
 
 	if err != nil {
 		return fmt.Errorf(
@@ -142,7 +109,7 @@ func (t *AKManager) Import(url string) (err error) {
 		)
 	}
 
-	if err = clientlib.SaveContractInfo(t.fm, ci, d); err != nil {
+	if err = clientlib.SaveContractInfo(t.Fd, ci, d); err != nil {
 		return fmt.Errorf(
 			"could not save contract info for %s: %s",
 			ak.Contract.Endpoint,
@@ -152,13 +119,13 @@ func (t *AKManager) Import(url string) (err error) {
 	sc := ci.Endpoint
 	for _, p := range ak.Pofs {
 		if p.Expiration <= time.Now().Unix() {
-			log.Printf("skipping expired accesskey %s", p.Digest())
+			t.l.Printf("skipping expired accesskey %s", p.Digest())
 			continue
 		}
 		dup := false
 		for _, p0 := range t.pofs {
 			if p0.Digest() == p.Digest() {
-				log.Printf("skipping duplicate accesskey %s", p.Digest())
+				t.l.Printf("skipping duplicate accesskey %s", p.Digest())
 				dup = true
 				break
 			}
@@ -168,51 +135,43 @@ func (t *AKManager) Import(url string) (err error) {
 		}
 	}
 
-	if err = t.fm.Set(t.pofs, filenames.Pofs); err != nil {
+	if err = t.Fd.Set(t.pofs, filenames.Pofs); err != nil {
 		return fmt.Errorf(
 			"could not save new pofs for %s: %s",
 			sc.String(), err,
 		)
 	}
-	di, err := consume.DirectoryInfo(cl, sc)
+	di, err := consume.DirectoryInfo(t.cl, sc)
 	if err != nil {
 		return fmt.Errorf("could not get contract directory info: %s", err)
 	}
 	// maybe there's an upgrade available?
-	var upgradev *semver.Version
 	if di.UpgradeChannels.Client != nil {
 		if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
-			upgradev = &v
-		}
-	}
-	var pid int
-	if err = t.fm.Get(&pid, filenames.Pid); err == nil {
-		if upgradev != nil {
-			log.Printf(
+			t.l.Printf(
 				"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
-				upgradev, version.VERSION,
+				v, version.VERSION,
 			)
 		}
-		process.Reload(pid)
 	}
 	return
 }
 
-func (t *AKManager) Get(fetch bool) (*servicekey.T, error) {
+func (t *T) GetSK(fetch bool) (*servicekey.T, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	if t.sk == nil {
-		t.fm.Get(&t.sk, "servicekey.json")
+		t.Fd.Get(&t.sk, "servicekey.json")
 	}
 	if t.sk != nil && t.sk.Contract != nil && !t.sk.IsExpiredAt(time.Now().Unix()) {
-		log.Printf(
+		t.l.Printf(
 			"found existing servicekey %s",
 			t.sk.PublicKey,
 		)
 		return t.sk, nil
 	}
-	if !t.c.Broker.Accesskey.UseOnDemand {
+	if !t.cfg.Broker.Accesskey.UseOnDemand {
 		return nil, fmt.Errorf("no fresh servicekey available and accesskey.use_on_demand is false")
 	}
 	if !fetch {
@@ -222,7 +181,7 @@ func (t *AKManager) Get(fetch bool) (*servicekey.T, error) {
 	return t.RefreshSK()
 }
 
-func (t *AKManager) NewSKFromPof(skurl string, p *pof.T) (*servicekey.T, error) {
+func (t *T) NewSKFromPof(skurl string, p *pof.T) (*servicekey.T, error) {
 	_, priv, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		return nil, err
@@ -235,9 +194,9 @@ func (t *AKManager) NewSKFromPof(skurl string, p *pof.T) (*servicekey.T, error) 
 	return sk, nil
 }
 
-func (t *AKManager) RefreshSK() (sk *servicekey.T, err error) {
+func (t *T) RefreshSK() (sk *servicekey.T, err error) {
 	ps := []*pof.T{}
-	if err = t.fm.Get(&ps, filenames.Pofs); err != nil {
+	if err = t.Fd.Get(&ps, filenames.Pofs); err != nil {
 		return nil, fmt.Errorf(
 			"could not open %s: %s; did you run `wireleap import`?",
 			filenames.Pofs,
@@ -252,19 +211,19 @@ func (t *AKManager) RefreshSK() (sk *servicekey.T, err error) {
 	// filter pofs & get sk
 	for _, p := range ps {
 		if sk == nil {
-			log.Printf(
+			t.l.Printf(
 				"generating new servicekey from pof %s...",
 				p.Digest(),
 			)
-			if clientlib.ContractURL(t.fm) == nil {
+			if clientlib.ContractURL(t.Fd) == nil {
 				return nil, fmt.Errorf("no contract defined")
 			}
 			sk, err = t.NewSKFromPof(
-				clientlib.ContractURL(t.fm).String()+"/servicekey/activate",
+				clientlib.ContractURL(t.Fd).String()+"/servicekey/activate",
 				p,
 			)
 			if err != nil {
-				log.Printf(
+				t.l.Printf(
 					"failed generating new servicekey from pof %s: %s",
 					p.Digest(),
 					err,
@@ -284,7 +243,7 @@ func (t *AKManager) RefreshSK() (sk *servicekey.T, err error) {
 		newps = append(newps, p)
 	}
 	// write new pofs
-	if err = t.fm.Set(&newps, filenames.Pofs); err != nil {
+	if err = t.Fd.Set(&newps, filenames.Pofs); err != nil {
 		return nil, fmt.Errorf(
 			"could not write new %s: %s",
 			filenames.Pofs,
@@ -295,7 +254,7 @@ func (t *AKManager) RefreshSK() (sk *servicekey.T, err error) {
 		return nil, fmt.Errorf("no servicekey available")
 	}
 	// write new servicekey
-	if err = t.fm.Set(&sk, filenames.Servicekey); err != nil {
+	if err = t.Fd.Set(&sk, filenames.Servicekey); err != nil {
 		return nil, fmt.Errorf(
 			"could not write new %s: %s",
 			filenames.Servicekey,
@@ -305,7 +264,7 @@ func (t *AKManager) RefreshSK() (sk *servicekey.T, err error) {
 	return sk, nil
 }
 
-func (t *AKManager) PickPofs() (r []*pof.T) {
+func (t *T) PickPofs() (r []*pof.T) {
 	for _, p := range t.pofs {
 		if !p.IsExpiredAt(time.Now().Unix()) {
 			// this one has not expired yet
@@ -315,25 +274,19 @@ func (t *AKManager) PickPofs() (r []*pof.T) {
 	return r
 }
 
-func (t *AKManager) Activate() (err error) {
+func (t *T) Activate() (err error) {
 	switch {
-	case clientlib.ContractURL(t.fm) == nil:
+	case clientlib.ContractURL(t.Fd) == nil:
 		return fmt.Errorf("contract has to be set")
-	case t.c.Broker.Accesskey.UseOnDemand:
+	case t.cfg.Broker.Accesskey.UseOnDemand:
 		return fmt.Errorf("accesskey.use_on_demand is enabled in config.json; refusing to run")
 	}
-
 	var ps []*pof.T
-	err = t.fm.Get(&ps, "pofs.json")
-
-	if err != nil {
+	if err = t.Fd.Get(&ps, "pofs.json"); err != nil {
 		return fmt.Errorf("could not read pofs from pofs.json: %s", err)
 	}
-
 	sk := &servicekey.T{}
-	err = t.fm.Get(sk, filenames.Servicekey)
-
-	if err != nil {
+	if err = t.Fd.Get(sk, filenames.Servicekey); err != nil {
 		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrNotExist) {
 			// this is fine
 		} else {
@@ -351,41 +304,16 @@ func (t *AKManager) Activate() (err error) {
 			)
 		}
 	}
-
 	// discard old servicekey & get a new one
-	sk, err = t.RefreshSK()
-
-	if err != nil {
-		return fmt.Errorf(
-			"error while activating servicekey with pof: %s",
-			err,
-		)
+	if sk, err = t.RefreshSK(); err != nil {
+		return fmt.Errorf("error while activating servicekey with pof: %s", err)
 	}
-
-	err = t.fm.Set(sk, filenames.Servicekey)
-
-	if err != nil {
-		return fmt.Errorf(
-			"could not write new servicekey: %s",
-			err,
-		)
+	if err = t.Fd.Set(sk, filenames.Servicekey); err != nil {
+		return fmt.Errorf("could not write new servicekey: %s", err)
 	}
-
-	// reload wireleap daemon if possible
-	var pid int
-	err = t.fm.Get(&pid, filenames.Pid)
-
-	// if not, it's no big deal -- still let the user know
-	if err != nil {
-		log.Printf(
-			"could not send SIGUSR1 to running wireleap daemon: %s",
-			err,
-		)
-	}
-
-	process.Reload(pid)
+	t.Reload()
 	return
 }
 
-func (t *AKManager) CurrentSK() *servicekey.T { return t.sk }
-func (t *AKManager) CurrentPofs() []*pof.T    { return t.pofs }
+func (t *T) CurrentSK() *servicekey.T { return t.sk }
+func (t *T) CurrentPofs() []*pof.T    { return t.pofs }
