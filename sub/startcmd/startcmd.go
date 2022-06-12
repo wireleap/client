@@ -4,19 +4,23 @@ package startcmd
 
 import (
 	"crypto/tls"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"syscall"
+	"text/tabwriter"
 
 	"github.com/wireleap/client/broker"
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
+	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/cli"
-	"github.com/wireleap/common/cli/commonsub/startcmd"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/process"
 	"golang.org/x/net/http2"
@@ -58,58 +62,120 @@ var (
 	restlog = log.New(os.Stderr, "[restapi] ", log.LstdFlags|log.Lmsgprefix)
 )
 
-func Cmd() *cli.Subcmd {
-	run := func(f fsdir.T) {
-		c := clientcfg.Defaults()
-		err := f.Get(&c, filenames.Config)
-		if err != nil {
-			log.Fatalf("could not read config: %s", err)
-		}
-		// common signal handler setup
-		if c.Broker.Address == nil {
-			log.Fatalf("broker.address not provided, refusing to start")
-		}
-		log.Default().SetFlags(log.LstdFlags | log.Lmsgprefix)
-		log.Default().SetPrefix("[controller] ")
-		brok := broker.New(f, &c, broklog)
-		shutdowns = append(shutdowns, brok.Shutdown)
-		reloads = append(reloads, brok.Reload)
-		defer brok.Shutdown()
-
-		mux := http.NewServeMux()
-		mux.Handle("/broker", brok)
-
-		// combo socket?
-		if *c.Address == *c.Broker.Address {
-			mux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
-			restlog.Printf("listening on h2c://%s", *c.Address)
-		} else {
-			restmux := http.NewServeMux()
-			restmux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
-
-			restl, err := net.Listen("tcp", *c.Address)
-			if err != nil {
-				restlog.Fatalf("listening on h2c://%s failed: %s", *c.Address, err)
+func Cmd(arg0 string) *cli.Subcmd {
+	fs := flag.NewFlagSet("start", flag.ExitOnError)
+	fg := fs.Bool("fg", false, "Run in foreground, don't detach")
+	r := &cli.Subcmd{
+		FlagSet: fs,
+		Desc:    fmt.Sprintf("Start %s daemon", arg0),
+		Run: func(fm fsdir.T) {
+			var err error
+			c := clientcfg.Defaults()
+			if err = fm.Get(&c, filenames.Config); err != nil {
+				log.Fatalf("could not read config: %s", err)
 			}
-			setupServer(restl, restmux, brok.T.TLSClientConfig)
-			restlog.Printf("listening on h2c://%s", *c.Address)
-		}
+			if *fg == false {
+				var pid int
+				if err = fm.Get(&pid, arg0+".pid"); err == nil {
+					if process.Exists(pid) {
+						log.Fatalf("%s daemon is already running!", arg0)
+					}
+				}
 
-		brokl, err := net.Listen("tcp", *c.Broker.Address)
-		if err != nil {
-			broklog.Fatalf("listening on h2c://%s failed: %s", *c.Broker.Address, err)
-		}
-		setupServer(brokl, mux, brok.T.TLSClientConfig)
-		broklog.Printf("listening on h2c://%s, waiting for forwarders to connect", *c.Broker.Address)
+				binary, err := exec.LookPath(os.Args[0])
+				if err != nil {
+					log.Fatalf("could not find own binary path: %s", err)
+				}
 
-		cli.SignalLoop(cli.SignalMap{
-			process.ReloadSignal: reload,
-			syscall.SIGINT:       shutdown,
-			syscall.SIGTERM:      shutdown,
-			syscall.SIGQUIT:      shutdown,
-		})
+				logpath := fm.Path(arg0 + ".log")
+				logfile, err := os.OpenFile(logpath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+
+				if err != nil {
+					log.Fatalf("could not open logfile %s: %s", logpath, err)
+				}
+				defer logfile.Close()
+
+				cmd := exec.Cmd{
+					Path:   binary,
+					Args:   []string{binary, "start", "--fg"},
+					Stdout: logfile,
+					Stderr: logfile,
+				}
+				if err = cmd.Start(); err != nil {
+					log.Fatalf("could not spawn background %s process: %s", arg0, err)
+				}
+				log.Printf(
+					"starting %s with pid %d, writing to %s...",
+					arg0, cmd.Process.Pid, logpath,
+				)
+				var st restapi.StatusReply
+				cl := client.New(nil)
+				if err = cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st); err == nil && st.State != "unknown" {
+					log.Printf(
+						"successfully spawned %s with pid %d, writing to %s",
+						arg0, cmd.Process.Pid, logpath,
+					)
+					return
+				}
+				log.Printf("%s is not running, %s follows:", arg0, logpath)
+				b, err := ioutil.ReadFile(logpath)
+				if err != nil {
+					log.Fatalf("could not get %s contents!", logpath)
+				}
+				os.Stdout.Write(b)
+				os.Exit(1)
+				return
+			}
+			if err = fm.Set(os.Getpid(), arg0+".pid"); err != nil {
+				log.Fatalf("could not write pid: %s", err)
+			}
+
+			// common signal handler setup
+			if c.Broker.Address == nil {
+				log.Fatalf("broker.address not provided, refusing to start")
+			}
+			log.Default().SetFlags(log.LstdFlags | log.Lmsgprefix)
+			log.Default().SetPrefix("[controller] ")
+			brok := broker.New(fm, &c, broklog)
+			shutdowns = append(shutdowns, brok.Shutdown)
+			reloads = append(reloads, brok.Reload)
+			defer brok.Shutdown()
+
+			mux := http.NewServeMux()
+			mux.Handle("/broker", brok)
+
+			// combo socket?
+			if *c.Address == *c.Broker.Address {
+				mux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
+				restlog.Printf("listening on h2c://%s", *c.Address)
+			} else {
+				restmux := http.NewServeMux()
+				restmux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
+
+				restl, err := net.Listen("tcp", *c.Address)
+				if err != nil {
+					restlog.Fatalf("listening on h2c://%s failed: %s", *c.Address, err)
+				}
+				setupServer(restl, restmux, brok.T.TLSClientConfig)
+				restlog.Printf("listening on h2c://%s", *c.Address)
+			}
+
+			brokl, err := net.Listen("tcp", *c.Broker.Address)
+			if err != nil {
+				broklog.Fatalf("listening on h2c://%s failed: %s", *c.Broker.Address, err)
+			}
+			setupServer(brokl, mux, brok.T.TLSClientConfig)
+			broklog.Printf("listening on h2c://%s, waiting for forwarders to connect", *c.Broker.Address)
+
+			cli.SignalLoop(cli.SignalMap{
+				process.ReloadSignal: reload,
+				syscall.SIGINT:       shutdown,
+				syscall.SIGTERM:      shutdown,
+				syscall.SIGQUIT:      shutdown,
+			})
+		},
 	}
-	r := startcmd.Cmd("wireleap", run)
+	r.Writer = tabwriter.NewWriter(r.FlagSet.Output(), 6, 8, 1, ' ', 0)
 	r.Desc = fmt.Sprintf("%s %s", r.Desc, "(Wireleap connection broker)")
 	r.Sections = []cli.Section{
 		{
