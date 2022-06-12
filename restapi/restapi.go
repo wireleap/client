@@ -120,12 +120,12 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			for _, r := range t.br.ActiveCircuit() {
 				circList = append(circList, r.Addr.String())
 			}
-			t.reply(w, statusReply{
+			t.reply(w, StatusReply{
 				Home:    t.br.Fd.Path(),
 				Pid:     os.Getpid(),
 				State:   "active",
-				Broker:  statusBroker{ActiveCircuit: circList},
-				Upgrade: statusUpgrade{Required: t.br.IsUpgradeable()},
+				Broker:  StatusBroker{ActiveCircuit: circList},
+				Upgrade: StatusUpgrade{Required: t.br.IsUpgradeable()},
 			})
 		}),
 	}))
