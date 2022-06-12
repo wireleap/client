@@ -23,7 +23,7 @@ func (t *T) newAccesskeysReply() (rs []*accesskeyReply) {
 		return
 	}
 	// get contract info
-	if sk := t.br.AKM.CurrentSK(); sk != nil {
+	if sk := t.br.CurrentSK(); sk != nil {
 		state := "active"
 		if sk.IsExpiredAt(time.Now().Unix()) {
 			state = "expired"
@@ -35,7 +35,7 @@ func (t *T) newAccesskeysReply() (rs []*accesskeyReply) {
 			Expiration: sk.Contract.SettlementOpen,
 		})
 	}
-	for _, p := range t.br.AKM.CurrentPofs() {
+	for _, p := range t.br.CurrentPofs() {
 		rs = append(rs, &accesskeyReply{
 			Contract:   ci.Endpoint,
 			Duration:   int64(ci.Servicekey.Duration),

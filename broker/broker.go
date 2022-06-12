@@ -1,8 +1,12 @@
+// Copyright (c) 2022 Wireleap
+
 package broker
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -23,6 +27,7 @@ import (
 	"github.com/wireleap/common/api/dirinfo"
 	"github.com/wireleap/common/api/interfaces/clientcontract"
 	"github.com/wireleap/common/api/interfaces/clientdir"
+	"github.com/wireleap/common/api/pof"
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/relaylist"
 	"github.com/wireleap/common/api/servicekey"
@@ -49,8 +54,9 @@ type T struct {
 	*transport.T
 	// broker prefix logger
 	l *log.Logger
-	// accesskey manager
-	AKM *AKManager
+	// accesskey manager state
+	sk   *servicekey.T
+	pofs []*pof.T
 }
 
 func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
@@ -64,9 +70,10 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 		l:     l,
 	}
 	var err error
-	t.AKM, err = NewAKManager(t.Fd, t.cfg, t.cl)
-	if err != nil {
-		t.l.Fatal("could not initialize accesskey manager: %s", err)
+	if err = t.Fd.Get(&t.pofs, filenames.Pofs); err != nil {
+		if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrNotExist) {
+			t.l.Fatal("could not get previous pofs to initialize accesskeys: %s", err)
+		}
 	}
 	if cfg.Broker.Address == nil {
 		t.l.Fatal("broker.address is nil in config, please set it")
@@ -171,7 +178,7 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dialer := clientlib.CircuitDialer(
-		func() (*servicekey.T, error) { return t.AKM.Get(true) },
+		func() (*servicekey.T, error) { return t.GetSK(true) },
 		t.Circuit,
 		dialf,
 	)
