@@ -57,6 +57,8 @@ type T struct {
 	// accesskey manager state
 	sk   *servicekey.T
 	pofs []*pof.T
+	// need upgrading?
+	upgrade bool
 }
 
 func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
@@ -308,3 +310,15 @@ func (t *T) Shutdown() {
 func (t *T) Config() *clientcfg.C { return t.cfg }
 
 func (t *T) SaveConfig() error { return t.Fd.Set(&t.cfg, filenames.Config) }
+
+func (t *T) SetUpgradeable(val bool) {
+	t.mu.Lock()
+	t.upgrade = val
+	t.mu.Unlock()
+}
+
+func (t *T) IsUpgradeable() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.upgrade
+}
