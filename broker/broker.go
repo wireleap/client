@@ -246,6 +246,7 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 		if v, ok := di.UpgradeChannels.Client[version.Channel]; ok && v.GT(version.VERSION) {
 			skipv := upgrade.NewConfig(t.Fd, "wireleap", false).SkippedVersion()
 			if skipv != nil && skipv.EQ(v) {
+				t.SetUpgradeable(true)
 				t.l.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
 				t.l.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
 			} else {
