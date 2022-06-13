@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"text/tabwriter"
 
@@ -126,11 +127,6 @@ func Cmd(arg0 string) *cli.Subcmd {
 				os.Exit(1)
 				return
 			}
-			if err = fm.Set(os.Getpid(), arg0+".pid"); err != nil {
-				log.Fatalf("could not write pid: %s", err)
-			}
-
-			// common signal handler setup
 			if c.Broker.Address == nil {
 				log.Fatalf("broker.address not provided, refusing to start")
 			}
@@ -147,26 +143,54 @@ func Cmd(arg0 string) *cli.Subcmd {
 			// combo socket?
 			if *c.Address == *c.Broker.Address {
 				mux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
-				restlog.Printf("listening on h2c://%s", *c.Address)
+				restlog.Printf("listening h2c on %s", *c.Address)
 			} else {
 				restmux := http.NewServeMux()
 				restmux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
 
-				restl, err := net.Listen("tcp", *c.Address)
-				if err != nil {
-					restlog.Fatalf("listening on h2c://%s failed: %s", *c.Address, err)
+				var restl net.Listener
+				if strings.HasPrefix(*c.Address, "/") {
+					if err = os.RemoveAll(*c.Address); err != nil {
+						restlog.Fatalf("could not remove unix socket %s: %s", *c.Address, err)
+					}
+					restl, err = net.Listen("unix", *c.Address)
+					if err != nil {
+						restlog.Fatalf("listening h2c on unix:%s failed: %s", *c.Address, err)
+					}
+					restlog.Printf("listening h2c on unix:%s", *c.Address)
+				} else {
+					restl, err = net.Listen("tcp", *c.Address)
+					if err != nil {
+						restlog.Fatalf("listening h2c on http://%s failed: %s", *c.Address, err)
+					}
+					restlog.Printf("listening h2c on http://%s", *c.Address)
 				}
+				defer restl.Close()
 				setupServer(restl, restmux, brok.T.TLSClientConfig)
-				restlog.Printf("listening on h2c://%s", *c.Address)
 			}
 
-			brokl, err := net.Listen("tcp", *c.Broker.Address)
-			if err != nil {
-				broklog.Fatalf("listening on h2c://%s failed: %s", *c.Broker.Address, err)
+			var brokl net.Listener
+			if strings.HasPrefix(*c.Broker.Address, "/") {
+				if err = os.RemoveAll(*c.Broker.Address); err != nil {
+					restlog.Fatalf("could not remove unix socket %s: %s", *c.Broker.Address, err)
+				}
+				brokl, err = net.Listen("unix", *c.Broker.Address)
+				if err != nil {
+					broklog.Fatalf("listening h2c on unix:%s failed: %s", *c.Broker.Address, err)
+				}
+				broklog.Printf("listening h2c on unix:%s, waiting for forwarders", *c.Broker.Address)
+			} else {
+				brokl, err = net.Listen("tcp", *c.Broker.Address)
+				if err != nil {
+					broklog.Fatalf("listening h2c on http://%s failed: %s", *c.Broker.Address, err)
+				}
+				broklog.Printf("listening h2c on http://%s, waiting for forwarders", *c.Broker.Address)
 			}
+			defer brokl.Close()
 			setupServer(brokl, mux, brok.T.TLSClientConfig)
-			broklog.Printf("listening on h2c://%s, waiting for forwarders to connect", *c.Broker.Address)
-
+			if err = fm.Set(os.Getpid(), arg0+".pid"); err != nil {
+				log.Fatalf("could not write pid: %s", err)
+			}
 			cli.SignalLoop(cli.SignalMap{
 				process.ReloadSignal: reload,
 				syscall.SIGINT:       shutdown,
