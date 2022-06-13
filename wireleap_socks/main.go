@@ -166,25 +166,11 @@ func ProxyUDP(l net.PacketConn, dialer DialFunc) {
 
 const StateSock = "wireleap_socks.sock"
 
-func unixServer(p string, rts provide.Routes) error {
-	if err := os.RemoveAll(p); err != nil {
-		return err
-	}
-	l, err := net.Listen("unix", p)
-	if err != nil {
-		return err
-	}
-	defer l.Close()
-	mux := provide.NewMux(rts)
-	h := &http.Server{Handler: mux}
-	return h.Serve(l)
-}
-
 func main() {
 	// set up state API
 	state := "activating"
 	go func() {
-		err := unixServer(StateSock, provide.Routes{"/state": provide.MethodGate(provide.Routes{
+		err := restapi.UnixServer(StateSock, provide.Routes{"/state": provide.MethodGate(provide.Routes{
 			http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				st := restapi.FwderState{State: state}
 				b, err := json.Marshal(st)
