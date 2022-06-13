@@ -30,9 +30,6 @@ func Cmd() *cli.Subcmd {
 					log.Fatalf("could not write initial config.json: %s", err)
 				}
 				for k, v := range map[string]string{
-					"forwarders.socks":               "127.0.0.1:13491",
-					"forwarders.tun":                 "10.13.49.0:13493",
-					"broker.address":                 "127.0.0.1:13492",
 					"broker.accesskey.use_on_demand": "true",
 				} {
 					configcmd.Run(fm, k, v)

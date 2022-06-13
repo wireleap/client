@@ -57,10 +57,10 @@ type Forwarders struct {
 // Defaults provides a config with sane defaults whenever possible.
 func Defaults() C {
 	var (
+		restaddr = "127.0.0.1:13490"
+		brokaddr = "127.0.0.1:13490"
 		sksaddr  = "127.0.0.1:13491"
-		restaddr = "127.0.0.1:13492"
-		brokaddr = "127.0.0.1:13492"
-		tunaddr  = "10.13.49.0:13493"
+		tunaddr  = "10.13.49.0:13492"
 	)
 	return C{
 		Address: &restaddr,
