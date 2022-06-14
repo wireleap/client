@@ -104,16 +104,16 @@ The client configuration is stored in `config.json`. This file will
 automatically be created upon `wireleap init`, and the contract variable
 will be set when importing accesskeys. Currently supported variables:
 
-Key | Type | Comment
---- | ---- | -------
-timeout | `string` | Dial timeout duration
-contract | `string` | Service contract associated with accesskeys
-accesskey.use_on_demand | `bool` | Activate accesskeys as needed
-circuit.hops | `int` | Number of relay hops to use in a circuit
-circuit.whitelist | `list` | Whitelist of relays to use
-address.socks | `string` | SOCKS5 proxy address of wireleap daemon
-address.h2c | `string` | H2C proxy address of wireleap daemon
-address.tun | `string` | TUN device address (not loopback)
+Key                     | Type     | Comment
+---                     | ----     | -------
+timeout                 | `string` | Dial timeout duration
+contract                | `string` | Service contract associated with accesskeys
+accesskey.use_on_demand | `bool`   | Activate accesskeys as needed
+circuit.hops            | `int`    | Number of relay hops to use in a circuit
+circuit.whitelist       | `list`   | Whitelist of relays to use
+address.socks           | `string` | SOCKS5 proxy address of wireleap daemon
+address.h2c             | `string` | H2C proxy address of wireleap daemon
+address.tun             | `string` | TUN device address (not loopback)
 
 ```json
 {
@@ -205,9 +205,9 @@ specified implicitly asserts the relay roles as well.
 
 Hops | Fronting | Entropic | Backing
 ---- | -------- | -------- | -------
-`1` | 0 | 0 | 1
-`2` | 1 | 0 | 1
-`3+` | 1 | N | 1
+`1`  | 0        | 0        | 1
+`2`  | 1        | 0        | 1
+`3+` | 1        | N        | 1
 
 ```shell
 # set the number of circuit hops (will auto-generate a new circuit)
