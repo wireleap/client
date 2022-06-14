@@ -136,17 +136,21 @@ func Cmd(arg0 string) *cli.Subcmd {
 			shutdowns = append(shutdowns, brok.Shutdown)
 			reloads = append(reloads, brok.Reload)
 			defer brok.Shutdown()
+			os.Mkdir(fm.Path("webroot"), 0755)
 
 			mux := http.NewServeMux()
 			mux.Handle("/broker", brok)
+			mux.Handle("/broker/", http.NotFoundHandler())
 
 			// combo socket?
 			if *c.Address == *c.Broker.Address {
 				mux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
+				mux.Handle("/", http.FileServer(http.Dir(fm.Path("webroot"))))
 				restlog.Printf("listening h2c on %s", *c.Address)
 			} else {
 				restmux := http.NewServeMux()
 				restmux.Handle("/api/", http.StripPrefix("/api", restapi.New(brok, restlog)))
+				restmux.Handle("/", http.FileServer(http.Dir(fm.Path("webroot"))))
 
 				var restl net.Listener
 				if strings.HasPrefix(*c.Address, "/") {
