@@ -26,12 +26,6 @@ This repository is for the Wireleap client.
 - [Versioning](#versioning)
 - [Building](#building)
 - [Contributing](#contributing)
-    - [Fork, clone and setup upstream remote](#fork-clone-and-setup-upstream-remote)
-    - [Create a feature branch and make your changes](#create-a-feature-branch-and-make-your-changes)
-    - [Unit testing](#unit-testing)
-    - [Rebase on master if needed](#rebase-on-master-if-needed)
-    - [Push changes and submit a pull request](#push-changes-and-submit-a-pull-request)
-    - [Review process and merge](#review-process-and-merge)
 - [License](#license)
 
 ## Installation
@@ -627,7 +621,7 @@ A note about the `master` branch:
 
 [github_flow]: https://guides.github.com/introduction/flow/
 
-### Fork, clone and setup upstream remote
+**Fork, clone and setup upstream remote**
 
 The following instructions outline the recommended procedure for
 creating a fork of this repository in order to contribute changes.
@@ -645,7 +639,7 @@ git pull --tags upstream master
 git config commit.gpgsign true
 ```
 
-### Create a feature branch and make your changes
+**Create a feature branch and make your changes**
 
 Create a descriptively named topic branch based on the `master` branch.
 Please take care to only address **one** issue/bug/feature per pull
@@ -665,7 +659,7 @@ commits should be clear.
 If a commit resolves a known issue or relates to other commits or PRs,
 please refer to them.
 
-### Unit testing
+**Unit testing**
 
 The unit tests can either be run on your host or within docker using the
 official golang docker image.
@@ -682,7 +676,7 @@ mkdir -p build/.deps
 DEPS_CACHE=build/.deps ./contrib/docker/run-tests.sh
 ```
 
-### Rebase on master if needed
+**Rebase on master if needed**
 
 It can happen that as you were working on a feature, the state of the
 `upstream/master` branch has changed due to merging other pull requests.
@@ -699,7 +693,7 @@ git rebase --interactive master DESCRIPTIVE_BRANCH_NAME
 After every change to the git history of your topic branch, perform
 testing to avoid regressions.
 
-### Push changes and submit a pull request
+**Push changes and submit a pull request**
 
 When you think the topic branch is ready for merging, passes all tests,
 all changes are committed with appropriate commit messages, and your
@@ -723,7 +717,7 @@ Finally, click `create pull request` so the reviewers can review and
 approve the changes, or request modifications prior to performing the
 merge.
 
-### Review process and merge
+**Review process and merge**
 
 The pull request may be approved or additional modifications might be
 requested by one of the reviewers. If modifications are requested,
