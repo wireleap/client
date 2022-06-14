@@ -44,6 +44,9 @@ macOS:
 ```shell
 curl -fsSL https://get.wireleap.com/darwin -o get-wireleap.sh
 sh get-wireleap.sh $HOME/wireleap
+
+# add wireleap to your $PATH. if unsure, this should work for most users
+sudo ln -s $HOME/wireleap/wireleap /usr/local/bin/wireleap
 ```
 
 Windows:
@@ -93,10 +96,6 @@ if [ -e "$HOME/wireleap/completion.bash" ]; then
 fi
 ```
 
-#### PowerShell
-
-Not implemented yet but planned.
-
 ## Controller
 
 Once `wireleap` has been initialized and is in your `$PATH`, the
@@ -111,9 +110,9 @@ wireleap status
 wireleap stop
 ```
 
-Traffic can be routed via wireleap either for specific applications via
-the [SOCKSv5 forwarder](#specific-traffic-socksv5), or for all traffic on the
-system via the [TUN forwarder](#all-traffic-tun).
+Traffic can then be routed via wireleap either for specific applications
+via the [SOCKSv5 forwarder](#specific-traffic-socksv5), or for all
+traffic on the system via the [TUN forwarder](#all-traffic-tun).
 
 ### Configuration
 
@@ -179,12 +178,16 @@ will be applied immediately (except for `address` fields).
 
 ### Accesskeys
 
+Accesskeys are a convenience abstraction to proof of funding's and
+service keys, and include contract metadata for association when
+originally imported.
+
 An accesskey is required to use relays enrolled in a service contract.
 Accesskeys are provided by contracts after obtaining access. They are
 used to cryptographically and independently generate tokens by the
-client for each relay in the routing path, and included in the
-appropriate encrypted onion layer of traffic being sent, allowing the
-relay to authorize service. This increases the degrees of separation
+client for each relay in the routing path (circuit), which are included
+in the appropriate encrypted onion layer of traffic being sent, allowing
+the relay to authorize service. This increases the degrees of separation
 between payment information and network usage.
 
 ```shell
@@ -193,16 +196,15 @@ wireleap accesskeys import file:///path/to/accesskeys.json
 wireleap accesskeys import https://example.com/accesskeys/...
 ```
 
-Accesskeys are used to activate servicekeys, which can be done
-automatically when needed (e.g., previous one has expired), or can be
-manually generated and activated.
+A proof of funding is used to activate servicekeys, which can be done
+automatically (`broker.accesskey.use_on_demand`) when needed (e.g.,
+previous one has expired), or can be manually generated and activated.
 
 ```shell
-# automatically activate as needed (default)
+# automatically generate and activate as needed (default)
 wireleap config broker.accesskey.use_on_demand true
 
-# manually activate
-wireleap config broker.accesskey.use_on_demand false
+# manually (only needed if broker.accesskey.use_on_demand is false)
 wireleap accesskeys activate
 ```
 
@@ -244,6 +246,9 @@ wireleap config broker.circuit.whitelist "wireleap://relay1.example.com:13499"
 
 # manually trigger new circuit generation
 wireleap reload
+
+# display currently active circuit
+wireleap status
 ```
 
 An initial circuit is generated upon launch and regenerated either
@@ -298,6 +303,7 @@ curl URL
 # manually specifying the --proxy-server flag
 google-chrome \
     --proxy-server="socks5://$(wireleap config forwarders.socks.address)" \
+    --host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE 127.0.0.1" \
     --user-data-dir="$HOME/.config/google-chrome-wireleap" \
     --incognito
 
@@ -317,17 +323,7 @@ google-chrome \
 
 As mentioned above, there is no standard for proxy configuration among
 applications, so a few wrapper scripts are included in
-`scripts/default/` (or `scripts\default\`) which can be executed by
-invoking `wireleap exec`.
-
-On execution, the `WIRELEAP_SOCKS` environmental variable will be
-available inside the script containing the current `wireleap` SOCKSv5
-listening address. The convenience environment variables
-`WIRELEAP_SOCKS_HOST`, `WIRELEAP_SOCKS_PORT` and `WIRELEAP_HOME` are
-also available.
-
-Note: User-defined scripts should be placed in `scripts` which take
-preference over the default scripts.
+`scripts/default/` which can be executed by invoking `wireleap exec`.
 
 ```shell
 # list available exec commands
@@ -338,7 +334,21 @@ wireleap exec curl URL
 wireleap exec git clone URL
 wireleap exec firefox [URL]
 wireleap exec google-chrome [URL]
+wireleap exec chromium-browser [URL]
+wireleap exec brave-browser [URL]
 ```
+
+It is possible to create custom user-defined scripts. They should
+be placed in `scripts` which take preference over the default scripts,
+and will not be overwritten on upgrade.
+
+When a script is executed, the following environmental variables will be
+available inside the script for convenience:
+
+- `WIRELEAP_HOME`
+- `WIRELEAP_SOCKS`
+- `WIRELEAP_SOCKS_HOST`
+- `WIRELEAP_SOCKS_PORT`
 
 #### wireleap intercept
 
@@ -397,26 +407,28 @@ wireleap tun log
 wireleap tun stop
 ```
 
-**Potential macOS firewall issues**
+#### Potential application firewall issues
 
-During testing it became apparent that enabling the built-in [macOS
-application firewall](https://support.apple.com/en-us/HT201642) can
-interfere with `wireleap tun`, making it fail silently instead of
-tunneling through the configured circuit. If your application firewall
-is disabled in `System Preferences -> Security & Privacy -> Firewall`,
-you do not need to do anything. However if it is enabled, you will need
-to add a firewall rule for `wireleap`. Please ensure that you run it in
-the foreground for the first time with `wireleap tun start --fg`, which
-should bring up a prompt asking you whether to allow incoming
-connections to `wireleap`. You should answer with "Allow". If there is
-no prompt, try [adding the `wireleap` binary
-manually](https://support.apple.com/guide/mac-help/block-connections-to-your-mac-with-a-firewall-mh34041/mac#mchlp218b2b0)
-in the firewall settings with the firewall mode set to "Allow incoming
-connections". If none of that works, disabling the firewall altogether
-would allow `wireleap tun` to work. However, please note that disabling
-the firewall may affect the security of your system.
+Application firewalls could interfere with `wireleap tun`, making it
+fail silently instead of tunneling through the configured circuit.
 
-We are currently investigating this issue.
+For example on macOS, if the built-in [application firewall](https://support.apple.com/en-us/HT201642)
+is enabled this could happen. To remedy this, a firewall rule needs to
+be added for `wireleap`. Starting the wireleap tun daemon in the
+**foreground** should bring up a prompt asking *whether to allow
+incoming connections to wireleap*. You should answer **ALLOW**.
+
+```shell
+wireleap tun start --fg
+```
+
+If there is no prompt, try [adding the wireleap binary manually](https://support.apple.com/guide/mac-help/block-connections-to-your-mac-with-a-firewall-mh34041/mac#mchlp218b2b0)
+in the firewall settings with the firewall mode set to **Allow incoming
+connections**.
+
+If none of that works, disabling the firewall altogether would allow
+`wireleap tun` to work. However, please note that disabling the firewall
+may affect the security the system.
 
 ## Upgrade
 
@@ -426,10 +438,9 @@ keep the client up to date. A client which is out of date with regard to
 the directory's required client version will refuse to run.
 
 The client update channels supported by the directory and the respective
-latest version is exposed via the directory's `/info` endpoint.
-
-The upgrade process is interactive so you will have the possibility
-to accept or decline based on the changelog for the new release version.
+latest version is exposed via the directory's `/info` endpoint. The
+upgrade process is interactive so you will have the possibility to
+accept or decline based on the changelog for the new release version.
 
 ```shell
 wireleap upgrade
@@ -444,7 +455,8 @@ wireleap rollback
 ```
 
 If the upgrade was not successful, it is possible to skip the faulty
-version explicitly.
+version explicitly. For example, the following with skip upgrades to
+version 1.2.3.
 
 Note: since the `.skip-upgrade-version` file has to be valid JSON, the
 version number to be skipped should be quoted.
