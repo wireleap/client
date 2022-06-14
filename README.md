@@ -13,12 +13,13 @@ This repository is for the Wireleap client.
 
 - [Installation](#installation)
     - [Shell completion](#shell-completion)
-- [Configuration](#configuration)
-- [Accesskeys](#accesskeys)
-- [Circuit](#circuit)
-- [Usage](#usage)
-    - [wireleap socks](#wireleap-socks)
-    - [wireleap tun](#wireleap-tun)
+- [Controller](#controller)
+    - [Configuration](#configuration)
+    - [Accesskeys](#accesskeys)
+    - [Circuit](#circuit)
+- [Forwarders](#forwarders)
+    - [Specific traffic (SOCKSv5)](#specific-traffic-socksv5)
+    - [All traffic (TUN)](#all-traffic-tun)
 - [Upgrade](#upgrade)
 - [Files](#files)
 - [Versioning](#versioning)
@@ -96,7 +97,25 @@ fi
 
 Not implemented yet but planned.
 
-## Configuration
+## Controller
+
+Once `wireleap` has been initialized and is in your `$PATH`, the
+controller daemon can be started.
+
+```shell
+# start the wireleap controller daemon
+wireleap start
+wireleap status
+
+# (at some later time) stop the wireleap controller daemon
+wireleap stop
+```
+
+Traffic can be routed via wireleap either for specific applications via
+the [SOCKSv5 forwarder](#specific-traffic-socksv5), or for all traffic on the
+system via the [TUN forwarder](#all-traffic-tun).
+
+### Configuration
 
 The client configuration is stored in `config.json`. This file will
 automatically be created upon `wireleap init`. Currently supported
@@ -158,7 +177,7 @@ wireleap config broker.circuit.hops 3
 After changing configuration options via `wireleap config`, the changes
 will be applied immediately (except for `address` fields).
 
-## Accesskeys
+### Accesskeys
 
 An accesskey is required to use relays enrolled in a service contract.
 Accesskeys are provided by contracts after obtaining access. They are
@@ -187,7 +206,7 @@ wireleap config broker.accesskey.use_on_demand false
 wireleap accesskeys activate
 ```
 
-## Circuit
+### Circuit
 
 The circuit defines which relays will be used to transmit traffic. Each
 relay enrolled into a contract assigns itself a role related to its
@@ -233,25 +252,9 @@ receives the `SIGUSR1` signal (which also happens when settings are
 modified via `wireleap config` or a reload is requested via `wireleap
 reload`).
 
-## Usage
+## Forwarders
 
-Once `wireleap` has been initialized and is in your `$PATH`, start the
-controller daemon.
-
-```shell
-# start the wireleap controller daemon
-wireleap start
-wireleap status
-
-# (at some later time) stop the wireleap controller daemon
-wireleap stop
-```
-
-Traffic can be routed via wireleap either for specific applications via
-the [SOCKSv5 forwarder](#wireleap-socks), or for all traffic on the
-system via the [TUN forwarder](#wireleap-tun).
-
-### wireleap socks
+### Specific traffic (SOCKSv5)
 
 To forward specific traffic on a system through the `wireleap`
 connection broker, it is possible to use `wireleap socks`.
@@ -352,7 +355,7 @@ wireleap intercept curl URL
 wireleap intercept ssh USER@HOST
 ```
 
-### wireleap tun
+### All traffic (TUN)
 
 To forward all traffic on a system (both TCP and UDP) through the
 `wireleap` connection broker, it is possible to use `wireleap tun`
@@ -379,6 +382,7 @@ sudo chmod u+s $HOME/wireleap/wireleap_tun
 ```shell
 # start the wireleap controller (if not already running)
 wireleap start
+wireleap status
 
 # setup tun device, configure routes, and verify its running
 wireleap tun start
@@ -393,7 +397,7 @@ wireleap tun log
 wireleap tun stop
 ```
 
-#### Potential macOS firewall issues
+**Potential macOS firewall issues**
 
 During testing it became apparent that enabling the built-in [macOS
 application firewall](https://support.apple.com/en-us/HT201642) can
