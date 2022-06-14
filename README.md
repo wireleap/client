@@ -17,9 +17,7 @@ This repository is for the Wireleap client.
 - [Accesskeys](#accesskeys)
 - [Circuit](#circuit)
 - [Usage](#usage)
-    - [proxy settings](#proxy-settings)
-    - [wireleap exec](#wireleap-exec)
-    - [wireleap intercept](#wireleap-intercept)
+    - [wireleap socks](#wireleap-socks)
     - [wireleap tun](#wireleap-tun)
 - [Upgrade](#upgrade)
 - [Files](#files)
@@ -73,8 +71,8 @@ source](#building).
 #### bash
 
 Bash completion is available for all `wireleap` commands, sub-commands,
-option flags, as well as `exec` and `config circuit.whitelist`. Add the
-following line to your `$HOME/.bashrc` or similar location.
+option flags, as well as `exec` and `config broker.circuit.whitelist`.
+Add the following line to your `$HOME/.bashrc` or similar location.
 
 ```shell
 [ -e "$HOME/wireleap/completion.bash" ] && source "$HOME/wireleap/completion.bash"
@@ -101,36 +99,41 @@ Not implemented yet but planned.
 ## Configuration
 
 The client configuration is stored in `config.json`. This file will
-automatically be created upon `wireleap init`, and the contract variable
-will be set when importing accesskeys. Currently supported variables:
+automatically be created upon `wireleap init`. Currently supported
+variables:
 
-Key                     | Type     | Comment
----                     | ----     | -------
-timeout                 | `string` | Dial timeout duration
-contract                | `string` | Service contract associated with accesskeys
-accesskey.use_on_demand | `bool`   | Activate accesskeys as needed
-circuit.hops            | `int`    | Number of relay hops to use in a circuit
-circuit.whitelist       | `list`   | Whitelist of relays to use
-address.socks           | `string` | SOCKS5 proxy address of wireleap daemon
-address.h2c             | `string` | H2C proxy address of wireleap daemon
-address.tun             | `string` | TUN device address (not loopback)
+Key                            | Type     | Comment
+---                            | ----     | -------
+address                        | `string` | Controller address
+broker.address                 | `string` | Override default broker address
+broker.accesskey.use_on_demand | `bool`   | Activate accesskeys as needed
+broker.circuit.timeout         | `string` | Dial timeout duration
+broker.circuit.hops            | `int`    | Number of relays to use in a circuit
+broker.circuit.whitelist       | `list`   | Relay addresses to use in circuit
+forwarders.socks.address       | `string` | SOCKSv5 proxy address
+forwarders.tun.address         | `string` | TUN device address (not loopback)
 
 ```json
 {
-    "timeout": "5s",
-    "contract": "https://contract1.example.com",
+  "address": "127.0.0.1:13490",
+  "broker": {
     "accesskey": {
-        "use_on_demand": true
+      "use_on_demand": true
     },
     "circuit": {
-        "hops": 2,
-        "whitelist": []
-    },
-    "address": {
-        "socks": "127.0.0.1:13491",
-        "h2c": "127.0.0.1:13492",
-        "tun": "10.13.49.0:13493"
+      "timeout": "5s",
+      "hops": 1,
+      "whitelist": []
     }
+  },
+  "forwarders": {
+    "socks": {
+      "address": "127.0.0.1:13491"
+    },
+    "tun": {
+      "address": "10.13.49.0:13492"
+    }
+  }
 }
 ```
 
@@ -146,13 +149,10 @@ _setting_ and _getting_ configuration variables.
 wireleap help config
 
 # display current value of configuration variable
-wireleap config address.socks
+wireleap config forwarders.socks.address
 
-# set the address of the connection broker (requires daemon restart)
-wireleap config address.socks 127.0.0.1:3434
-
-# to whitelist only the relays known as "foo" and "bar"
-wireleap config circuit.whitelist "wireleap://foo:1234" "wireleap://bar:4321"
+# set a configuration variable
+wireleap config broker.circuit.hops 3
 ```
 
 After changing configuration options via `wireleap config`, the changes
@@ -169,12 +169,9 @@ relay to authorize service. This increases the degrees of separation
 between payment information and network usage.
 
 ```shell
-# import accesskeys from local filesystem
-wireleap import path/to/accesskeys.json
-cat path/to/accesskeys.json | wireleap import -
-
-# import accesskeys from url
-wireleap import https://example.com/accesskeys/REPLACE_WITH_ACCESSKEY_ID
+# import accesskeys
+wireleap accesskeys import file:///path/to/accesskeys.json
+wireleap accesskeys import https://example.com/accesskeys/...
 ```
 
 Accesskeys are used to activate servicekeys, which can be done
@@ -182,12 +179,12 @@ automatically when needed (e.g., previous one has expired), or can be
 manually generated and activated.
 
 ```shell
-# automatically generate and activate servicekeys as needed (default)
-wireleap config accesskey.use_on_demand true
+# automatically activate as needed (default)
+wireleap config broker.accesskey.use_on_demand true
 
-# manually generate and activate a servicekey
-wireleap config accesskey.use_on_demand false
-wireleap servicekey
+# manually activate
+wireleap config broker.accesskey.use_on_demand false
+wireleap accesskeys activate
 ```
 
 ## Circuit
@@ -199,9 +196,9 @@ on-ramp to the routing layer, while a `backing` relay provides an exit
 from the routing layer. `entropic` relays add additional entropy to the
 circuit in the routing layer.
 
-Depending on requirements, `circuit.hops` may be any positive integer,
-setting the amount of relays used in a circuit. The amount of hops
-specified implicitly asserts the relay roles as well.
+Depending on requirements, `broker.circuit.hops` may be any positive
+integer, setting the amount of relays used in a circuit. The amount of
+hops specified implicitly asserts the relay roles as well.
 
 Hops | Fronting | Entropic | Backing
 ---- | -------- | -------- | -------
@@ -211,7 +208,7 @@ Hops | Fronting | Entropic | Backing
 
 ```shell
 # set the number of circuit hops (will auto-generate a new circuit)
-wireleap config circuit.hops 3
+wireleap config broker.circuit.hops 3
 ```
 
 A circuit is generated by randomly selecting from the available relays
@@ -221,10 +218,10 @@ specific amount of hops, or a more general *only use these relays*.
 
 ```shell
 # set the number of circuit hops
-wireleap config circuit.hops 1
+wireleap config broker.circuit.hops 1
 
 # set a whitelist of relays to use
-wireleap config circuit.whitelist "wireleap://relay1.example.com:13490"
+wireleap config broker.circuit.whitelist "wireleap://relay1.example.com:13499"
 
 # manually trigger new circuit generation
 wireleap reload
@@ -239,48 +236,65 @@ reload`).
 ## Usage
 
 Once `wireleap` has been initialized and is in your `$PATH`, start the
-SOCKSv5 connection broker daemon.
+controller daemon.
 
 ```shell
-# start the wireleap daemon (default: 127.0.0.1:13491)
+# start the wireleap controller daemon
 wireleap start
-
-# verify it is running and show some useful info
 wireleap status
-wireleap info
 
-# (at some later time) stop the wireleap daemon
+# (at some later time) stop the wireleap controller daemon
 wireleap stop
 ```
 
+Traffic can be routed via wireleap either for specific applications via
+the [SOCKSv5 forwarder](#wireleap-socks), or for all traffic on the
+system via the [TUN forwarder](#wireleap-tun).
+
+### wireleap socks
+
+To forward specific traffic on a system through the `wireleap`
+connection broker, it is possible to use `wireleap socks`.
+
+The `wireleap socks` subcommand will use the bundled `wireleap_socks` binary
+(unpacked on `wireleap init`). Once the `wireleap` SOCKS forwarder is
+running, any application that supports the `SOCKSv5` protocol can be
+configured to route its traffic via the connection broker.
+
 ```shell
-# or, optionally, start the wireleap daemon in the foreground (ctrl-c to stop)
-wireleap start --fg
+# start the wireleap controller (if not already running)
+wireleap start
+wireleap status
+
+# start the socks daemon
+wireleap socks start
+wireleap socks status
+
+# any traffic sent to the socks forwarder should now be tunneled...
+
+# show the log
+wireleap socks log
+
+# (at some later time) stop the wireleap socks daemon
+wireleap socks stop
 ```
 
-Once the `wireleap` SOCKS5 connection broker is running, any application
-that supports the `SOCKS5` protocol can be configured to route its
-traffic via the connection broker.
-
-### proxy settings
+#### proxy settings
 
 Unfortunately, there is no standard for configuration so a few examples
 are provided.
 
-> Tip: `wireleap config address.socks` will return the SOCKS5 address
-> the wireleap daemon is configured to use.
-
 ```shell
 # manually specifying the --proxy flag
-curl --proxy socks5h://$(wireleap config address.socks) URL
+curl --proxy socks5h://$(wireleap config forwarders.socks.address) URL
 
 # manually exporting environment variable
-export ALL_PROXY="socks5h://$(wireleap config address.socks)"
+export ALL_PROXY="socks5h://$(wireleap config forwarders.socks.address)"
 curl URL
 
 # manually specifying the --proxy-server flag
 google-chrome \
-    --proxy-server="socks5://$(wireleap config address.socks)" \
+    --proxy-server="socks5://$(wireleap config forwarders.socks.address)" \
     --user-data-dir="$HOME/.config/google-chrome-wireleap" \
     --incognito
 
@@ -296,7 +310,7 @@ google-chrome \
     - Click: OK
 ```
 
-### wireleap exec
+#### wireleap exec
 
 As mentioned above, there is no standard for proxy configuration among
 applications, so a few wrapper scripts are included in
@@ -323,9 +337,9 @@ wireleap exec firefox [URL]
 wireleap exec google-chrome [URL]
 ```
 
-### wireleap intercept
+#### wireleap intercept
 
-For applications that do not support proxying via the `SOCKS5` protocol
+For applications that do not support proxying via the `SOCKSv5` protocol
 natively (or even those that do), it may be possible to use `wireleap
 intercept` (experimental: Linux only).
 
@@ -345,11 +359,11 @@ To forward all traffic on a system (both TCP and UDP) through the
 (currently Linux and macOS only).
 
 The `wireleap tun` subcommand will use the bundled `wireleap_tun` binary
-(unpacked on `wireleap init`) to set up a [tun
-device](https://en.wikipedia.org/wiki/TUN/TAP) and configure default
-routes through it so that all traffic from the local system goes through
-the tun device, effectively meaning that it is routed through the
-currently used wireleap broker circuit.
+(unpacked on `wireleap init`) to set up a
+[tun device](https://en.wikipedia.org/wiki/TUN/TAP) and configure
+default routes through it so that all traffic from the local system goes
+through the tun device, effectively meaning that it is routed through
+the currently used wireleap broker circuit.
 
 Note: `wireleap_tun` needs sufficient privileges to create a tun device
 and manage routes during the lifetime of the daemon, hence the `suid
@@ -363,14 +377,16 @@ sudo chmod u+s $HOME/wireleap/wireleap_tun
 ```
 
 ```shell
-# start the wireleap broker (required for tun)
+# start the wireleap controller (if not already running)
 wireleap start
 
 # setup tun device, configure routes, and verify its running
 wireleap tun start
 wireleap tun status
 
-# show the log (eg. $HOME/wireleap/wireleap_tun.log)
+# all tcp/udp traffic on the system should now be tunneled...
+
+# show the log
 wireleap tun log
 
 # (at some later time) stop the wireleap tun daemon
@@ -455,6 +471,9 @@ tree $HOME/wireleap
 ├── wireleap
 ├── wireleap.pid
 ├── wireleap.log
+├── wireleap_socks
+├── wireleap_socks.pid
+├── wireleap_socks.log
 ├── wireleap_tun
 ├── wireleap_tun.pid
 ├── wireleap_tun.log
@@ -476,20 +495,20 @@ currently used service contract.
 **servicekey.json**
 
 If present, contains the currently active servicekey for the currently
-active service contract. If `accesskey.use_on_demand` is set to
+active service contract. If `broker.accesskey.use_on_demand` is set to
 `true`, it is generated automatically using the proofs of funding from
-`pofs.json`. If `accesskey.use_on_demand` is set to `false` and an
+`pofs.json`. If `broker.accesskey.use_on_demand` is set to `false` and an
 expired servicekey is read from this file, `wireleap` will return an
 error. In that case, a new key can be generated via `wireleap
-servicekey`.
+accesskeys activate`.
 
 **pofs.json**
 
 Contains the list of proof-of-funding tokens for the currently active
 service contract obtained from importing `accesskeys.json` files. It is
-managed automatically by `wireleap` if `accesskey.use_on_demand` is set
-to `true`.  Alternatively, it can be managed manually via the `wireleap
-servicekey` command.
+managed automatically by `wireleap` if `broker.accesskey.use_on_demand`
+is set to `true`.  Alternatively, it can be managed manually via the
+`wireleap accesskeys activate` command.
 
 **relays.json**
 
