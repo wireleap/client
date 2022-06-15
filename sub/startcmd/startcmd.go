@@ -4,9 +4,9 @@ package startcmd
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -105,26 +105,21 @@ func Cmd(arg0 string) *cli.Subcmd {
 				if err = cmd.Start(); err != nil {
 					log.Fatalf("could not spawn background %s process: %s", arg0, err)
 				}
-				log.Printf(
-					"starting %s with pid %d, writing to %s...",
-					arg0, cmd.Process.Pid, logpath,
-				)
-				var st restapi.StatusReply
+				var st json.RawMessage
 				cl := client.New(nil)
-				if err = cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st); err == nil && st.State != "unknown" {
-					log.Printf(
-						"successfully spawned %s with pid %d, writing to %s",
-						arg0, cmd.Process.Pid, logpath,
-					)
+				if err = cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st); err == nil {
+					fmt.Println(string(st))
 					return
 				}
-				log.Printf("%s is not running, %s follows:", arg0, logpath)
-				b, err := ioutil.ReadFile(logpath)
-				if err != nil {
-					log.Fatalf("could not get %s contents!", logpath)
+				o := restapi.StatusReply{
+					Home:    fm.Path(),
+					Pid:     -1,
+					State:   "failed",
+					Broker:  restapi.StatusBroker{},
+					Upgrade: restapi.StatusUpgrade{},
 				}
+				b, _ := json.Marshal(o)
 				os.Stdout.Write(b)
-				os.Exit(1)
 				return
 			}
 			if c.Broker.Address == nil {
