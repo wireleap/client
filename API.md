@@ -708,10 +708,10 @@ The `contract` object.
 > Endpoints
 
 ```
-GET  /socks
-POST /socks/start
-POST /socks/stop
-GET  /socks/log
+GET  /forwarders/socks
+POST /forwarders/socks/start
+POST /forwarders/socks/stop
+GET  /forwarders/socks/log
 ```
 
 Provides an interface to manage the `wireleap_socks` daemon.
@@ -754,7 +754,7 @@ binary.state | `dict`   | SOCKSv5 binary status verification checks results
 > Get SOCKS information
 
 ```shell
-$ curl $BASE_URL/socks
+$ curl $BASE_URL/forwarders/socks
 ```
 
 Retrieves the current status of the SOCKS daemon.
@@ -772,7 +772,7 @@ The `socks` object.
 > Start SOCKS daemon
 
 ```shell
-$ curl -X POST $BASE_URL/socks/start
+$ curl -X POST $BASE_URL/forwarders/socks/start
 ```
 
 Starts the SOCKS daemon.
@@ -790,7 +790,7 @@ The `socks` object.
 > Stop SOCKS daemon
 
 ```shell
-$ curl -X POST $BASE_URL/socks/stop
+$ curl -X POST $BASE_URL/forwarders/socks/stop
 ```
 
 Stops the SOCKS daemon.
@@ -808,7 +808,7 @@ The `socks` object.
 > Get SOCKS log
 
 ```shell
-$ curl $BASE_URL/socks/log
+$ curl $BASE_URL/forwarders/socks/log
 ```
 
 > Response
@@ -835,10 +835,10 @@ Returns contents of `wireleap_socks.log`.
 > Endpoints
 
 ```
-GET  /tun
-POST /tun/start
-POST /tun/stop
-GET  /tun/log
+GET  /forwarders/tun
+POST /forwarders/tun/start
+POST /forwarders/tun/stop
+GET  /forwarders/tun/log
 ```
 
 Provides an interface to manage the `wireleap_tun` daemon.
@@ -886,7 +886,7 @@ binary.state | `dict`   | TUN binary status verification checks results
 > Get TUN information
 
 ```shell
-$ curl $BASE_URL/tun
+$ curl $BASE_URL/forwarders/tun
 ```
 
 Retrieves the current status of the TUN daemon.
@@ -904,7 +904,7 @@ The `tun` object.
 > Start TUN daemon
 
 ```shell
-$ curl -X POST $BASE_URL/tun/start
+$ curl -X POST $BASE_URL/forwarders/tun/start
 ```
 
 Starting the TUN daemon will set up a TUN device and configure default
@@ -924,7 +924,7 @@ The `tun` object.
 > Stop TUN daemon
 
 ```shell
-$ curl -X POST $BASE_URL/tun/stop
+$ curl -X POST $BASE_URL/forwarders/tun/stop
 ```
 
 Stops the TUN daemon.
@@ -942,7 +942,7 @@ The `tun` object.
 > Get TUN log
 
 ```shell
-$ curl $BASE_URL/tun/log
+$ curl $BASE_URL/forwarders/tun/log
 ```
 
 > Response
