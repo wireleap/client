@@ -14,6 +14,7 @@ import (
 	"github.com/wireleap/client/sub/tuncmd"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
+	"github.com/wireleap/common/api/duration"
 	"github.com/wireleap/common/api/interfaces/clientdir"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -83,7 +84,41 @@ func PostRollbackHook(f fsdir.T) (err error) {
 }
 
 // MIGRATIONS is the slice of versioned migrations.
-var MIGRATIONS = []*upgrade.Migration{}
+var MIGRATIONS = []*upgrade.Migration{
+	{
+		Name:    "restructuring_config",
+		Version: semver.Version{Major: 0, Minor: 5, Patch: 7},
+		Apply: func(f fsdir.T) error {
+			var oldc map[string]interface{}
+			if err := f.Get(&oldc, "config.json.next"); err != nil {
+				return fmt.Errorf("could not load config.json.next: %s", err)
+			}
+			c := clientcfg.Defaults()
+			// old timeout field
+			if timeout, ok := oldc["timeout"].(duration.T); ok {
+				c.Broker.Timeout = timeout
+			}
+			// old contract field is ignored/obsolete
+			// old accesskey field
+			if ak, ok := oldc["accesskey"].(clientcfg.Accesskey); ok {
+				c.Broker.Accesskey = ak
+			}
+			// old circuit field
+			if circ, ok := oldc["circuit"].(clientcfg.Circuit); ok {
+				c.Broker.Circuit = circ
+			}
+			// TODO address/port change?
+			if err := f.Set(&c, "config.json.next"); err != nil {
+				return fmt.Errorf("could not save config.json.next: %s", err)
+			}
+			return nil
+		},
+		Rollback: func(fsdir.T) error {
+			// since we only modify config.next there is no rollback
+			return nil
+		},
+	},
+}
 
 // LatestChannelVersion is a special function for wireleap which will obtain
 // the latest version supported by the currently configured update channel from
