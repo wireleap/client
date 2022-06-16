@@ -94,13 +94,12 @@ version | `string` | Version of controller API interface
 ```
 200 - OK                 Everything worked as expected
 400 - Bad Request        The request was unacceptable
-401 - Unauthorized       No valid authentication
 402 - Request Failed     Parameters valid but the request failed
 403 - Forbidden          No permission to perform request
 404 - Not Found          The requested resource doesn't exist
 405 - Method Not Allowed The requested resource exists but method not supported
-409 - Conflict           The request conflicts with another request
-500-504 - Error          Server Errors
+500 - Error              Internal server error
+501 - Error              Not implemented
 ```
 
 The REST API uses conventional HTTP response codes to indicate the
