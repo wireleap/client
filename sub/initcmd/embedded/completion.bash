@@ -34,7 +34,7 @@ __wireleap_comp() {
                 exec) words="$(__wireleap_scripts)";;
                 config)
                     case "${COMP_WORDS[2]}" in
-                        circuit.whitelist)
+                        broker.circuit.whitelist)
                             local cur="${COMP_WORDS[COMP_CWORD]}"
                             words="$(__wireleap_relays)"
                             # this is a hack but another way was not to be found
