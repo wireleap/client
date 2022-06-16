@@ -91,6 +91,7 @@ type Meta struct {
 
 func (c *C) Metadata() []*Meta {
 	return []*Meta{
+		{"address", "str", "H2C REST API address of wireleap daemon", &c.Address, true},
 		{"broker.address", "str", "H2C proxy address of wireleap daemon", &c.Broker.Address, true},
 		{"broker.timeout", "str", "Dial timeout duration", &c.Broker.Timeout, true},
 		{"broker.circuit.hops", "int", "Number of relay hops to use in a circuit", &c.Broker.Circuit.Hops, false},
