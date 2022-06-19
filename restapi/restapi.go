@@ -13,6 +13,7 @@ import (
 	"github.com/wireleap/client/broker"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/common/api/provide"
+	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/status"
 )
 
@@ -66,6 +67,31 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				t.l.Printf("error %s while serving relays", err)
 				status.ErrInternal.WriteTo(w)
 				return
+			}
+			type selectableRelay struct {
+				*relayentry.T
+				Selectable bool `json:"selectable"`
+			}
+			var ors []selectableRelay
+			// selectable by default
+			sel := true
+			wl := t.br.Config().Broker.Circuit.Whitelist
+			if wl != nil && len(*wl) > 0 {
+				// non-selectable by default if whitelist is set
+				for _, r := range rs {
+					sel = false
+					for _, wlr := range *wl {
+						if wlr == r.Addr.String() {
+							// found in whitelist = selectable
+							sel = true
+							break
+						}
+					}
+					ors = append(ors, selectableRelay{
+						T:          r,
+						Selectable: sel,
+					})
+				}
 			}
 			t.reply(w, rs)
 		}),
