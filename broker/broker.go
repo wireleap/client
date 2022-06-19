@@ -57,6 +57,8 @@ type T struct {
 	// accesskey manager state
 	sk   *servicekey.T
 	pofs []*pof.T
+	// contract info
+	ci *contractinfo.T
 	// need upgrading?
 	upgrade bool
 	// upgrade val lock (has to be separate from global)
@@ -91,7 +93,7 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 			di dirinfo.T
 			rl relaylist.T
 		)
-		if _, di, rl, err = t.Sync(); err != nil {
+		if di, rl, err = t.Sync(); err != nil {
 			t.l.Fatalf("could not get contract info: %s", err)
 		}
 		// cache relay ip addresses for tun
@@ -127,10 +129,8 @@ func (t *T) Circuit() (r []*relayentry.T, err error) {
 	if t.circ != nil {
 		return t.circ, nil
 	}
-	var (
-		rl relaylist.T
-	)
-	if _, _, rl, err = t.Sync(); err != nil {
+	var rl relaylist.T
+	if _, rl, err = t.Sync(); err != nil {
 		return nil, err
 	}
 	var all circuit.T
@@ -226,13 +226,13 @@ func (t *T) writeBypass(extra ...string) error {
 	return t.Fd.Set(bypass, filenames.Bypass)
 }
 
-func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error) {
+func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
 	sc := clientlib.ContractURL(t.Fd)
 	if sc == nil {
 		err = fmt.Errorf("contract is not defined")
 		return
 	}
-	if ci, err = consume.ContractInfo(t.cl, sc); err != nil {
+	if t.ci, err = consume.ContractInfo(t.cl, sc); err != nil {
 		err = fmt.Errorf(
 			"could not get contract info for %s: %s",
 			sc.String(), err,
@@ -266,17 +266,14 @@ func (t *T) Sync() (ci *contractinfo.T, di dirinfo.T, rl relaylist.T, err error)
 		)
 		return
 	}
-	if err = clientlib.SaveContractInfo(t.Fd, ci, rl); err != nil {
+	if err = clientlib.SaveContractInfo(t.Fd, t.ci, rl); err != nil {
 		err = fmt.Errorf("could not save contract info: %w", err)
 		return
 	}
 	return
 }
 
-func (t *T) ContractInfo() (ci *contractinfo.T, err error) {
-	err = t.Fd.Get(&ci, filenames.Contract)
-	return
-}
+func (t *T) ContractInfo() *contractinfo.T { return t.ci }
 
 func (t *T) Reload() {
 	t.l.Println("reloading config")
@@ -294,7 +291,7 @@ func (t *T) Reload() {
 	}
 	t.cfg = &cfg
 	// refresh contract info
-	if _, _, _, err := t.Sync(); err != nil {
+	if _, _, err := t.Sync(); err != nil {
 		t.l.Printf(
 			"could not refresh contract info: %s, aborting reload",
 			err,
