@@ -56,13 +56,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 	}))
 	t.mux.Handle("/contract", provide.MethodGate(provide.Routes{
 		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ci, err := t.br.ContractInfo()
-			if err != nil {
-				t.l.Printf("could not obtain contract info: %s", err)
-				status.ErrInternal.WriteTo(w)
-				return
-			}
-			t.reply(w, ci)
+			t.reply(w, t.br.ContractInfo())
 		}),
 	}))
 	t.mux.Handle("/relays", provide.MethodGate(provide.Routes{
@@ -95,7 +89,8 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.WriteTo(w)
 				return
 			}
-			if err = t.br.Import(air.URL.URL); err != nil {
+			_, err = t.br.Import(air.URL.URL)
+			if err != nil {
 				t.l.Printf("error when importing accesskeys: %s", err)
 				status.ErrRequest.Wrap(err).WriteTo(w)
 				return

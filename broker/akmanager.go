@@ -46,30 +46,30 @@ func (t *T) download(u string) ([]byte, error) {
 	return io.ReadAll(res.Body)
 }
 
-func (t *T) Import(u url.URL) (err error) {
+func (t *T) Import(u url.URL) (ak *accesskey.T, err error) {
 	data := []byte{}
 
 	switch {
 	case u.Scheme == "http":
-		return fmt.Errorf("HTTP import URLs are vulnerable to MitM attacks. Use HTTPS instead.")
+		return nil, fmt.Errorf("HTTP import URLs are vulnerable to MitM attacks. Use HTTPS instead.")
 	case u.Scheme == "https":
 		data, err = t.download(u.String())
 	case u.Scheme == "file":
 		data, err = ioutil.ReadFile(u.Path)
 	case !u.IsAbs():
-		return fmt.Errorf("url is not absolute: %s", u.String())
+		return nil, fmt.Errorf("url is not absolute: %s", u.String())
 	case u.Scheme == "":
-		return fmt.Errorf("empty import url scheme in %s", u.String())
+		return nil, fmt.Errorf("empty import url scheme in %s", u.String())
 	default:
-		return fmt.Errorf("could not parse url: %s", u.String())
+		return nil, fmt.Errorf("could not parse url: %s", u.String())
 	}
 	if err != nil {
-		return fmt.Errorf("could not read accesskey file: %s", err)
+		return nil, fmt.Errorf("could not read accesskey file: %s", err)
 	}
-	ak := &accesskey.T{}
+	ak = &accesskey.T{}
 	err = json.Unmarshal(data, &ak)
 	if err != nil {
-		return fmt.Errorf("could not unmarshal accesskey file: ", err)
+		return nil, fmt.Errorf("could not unmarshal accesskey file: ", err)
 	}
 	switch {
 	case ak == nil,
@@ -78,10 +78,10 @@ func (t *T) Import(u url.URL) (err error) {
 		ak.Pofs == nil,
 		ak.Contract.Endpoint == nil,
 		ak.Contract.PublicKey == nil:
-		return fmt.Errorf("malformed accesskey file")
+		return nil, fmt.Errorf("malformed accesskey file")
 	}
 	if ak.Version.Minor != accesskey.VERSION.Minor {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"incompatible accesskey version: %s, expected 0.%d.x",
 			ak.Version,
 			accesskey.VERSION.Minor,
@@ -89,7 +89,7 @@ func (t *T) Import(u url.URL) (err error) {
 	}
 	sc0 := clientlib.ContractURL(t.Fd)
 	if sc0 != nil && *sc0 != *ak.Contract.Endpoint {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"you are trying to import accesskeys for a contract %s different from the currently defined %s; please set up a separate wireleap directory for your %s needs and import %s accesskeys there",
 			ak.Contract.Endpoint,
 			sc0,
@@ -101,14 +101,14 @@ func (t *T) Import(u url.URL) (err error) {
 	ci, d, err := clientlib.GetContractInfo(t.cl, ak.Contract.Endpoint)
 
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"could not get contract info for %s: %s",
 			ak.Contract.Endpoint, err,
 		)
 	}
 
 	if !bytes.Equal(ak.Contract.PublicKey, ci.Pubkey) {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"contract public key mismatch; expecting %s from accesskey file, got %s from live contract",
 			ak.Contract.PublicKey,
 			base64.RawURLEncoding.EncodeToString(ci.Pubkey),
@@ -116,7 +116,7 @@ func (t *T) Import(u url.URL) (err error) {
 	}
 
 	if err = clientlib.SaveContractInfo(t.Fd, ci, d); err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"could not save contract info for %s: %s",
 			ak.Contract.Endpoint,
 			err,
@@ -142,14 +142,14 @@ func (t *T) Import(u url.URL) (err error) {
 	}
 
 	if err = t.Fd.Set(t.pofs, filenames.Pofs); err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"could not save new pofs for %s: %s",
 			sc.String(), err,
 		)
 	}
 	di, err := consume.DirectoryInfo(t.cl, sc)
 	if err != nil {
-		return fmt.Errorf("could not get contract directory info: %s", err)
+		return nil, fmt.Errorf("could not get contract directory info: %s", err)
 	}
 	// maybe there's an upgrade available?
 	if di.UpgradeChannels.Client != nil {
