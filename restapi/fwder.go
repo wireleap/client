@@ -93,10 +93,10 @@ func (t *T) registerForwarder(name string) {
 		mu.Lock()
 		switch name {
 		case "socks":
-			o.Address = *t.br.Config().Forwarders.Socks
+			o.Address = t.br.Config().Forwarders.Socks.Address
 			o.Binary.Ok = st.Exists && st.ChmodX
 		case "tun":
-			o.Address = *t.br.Config().Forwarders.Tun
+			o.Address = t.br.Config().Forwarders.Tun.Address
 			o.Binary.Ok = st.Exists && st.ChmodX && st.Chown0 && st.ChmodUS
 		}
 		o.Binary.State = st
@@ -136,8 +136,8 @@ func (t *T) registerForwarder(name string) {
 			os.Environ(),
 			"WIRELEAP_HOME="+t.br.Fd.Path(),
 			"WIRELEAP_ADDR_H2C="+*t.br.Config().Broker.Address+"/broker",
-			"WIRELEAP_ADDR_TUN="+*t.br.Config().Forwarders.Tun,
-			"WIRELEAP_ADDR_SOCKS="+*t.br.Config().Forwarders.Socks,
+			"WIRELEAP_ADDR_TUN="+t.br.Config().Forwarders.Tun.Address,
+			"WIRELEAP_ADDR_SOCKS="+t.br.Config().Forwarders.Socks.Address,
 		)
 		if err = t.br.Fd.Get(&pid, bin+".pid"); err == nil && process.Exists(pid) {
 			err = fmt.Errorf("%s daemon is already running!", bin)
