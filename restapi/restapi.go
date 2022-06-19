@@ -89,14 +89,14 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.WriteTo(w)
 				return
 			}
-			_, err = t.br.Import(air.URL.URL)
+			aks, err := t.br.Import(air.URL.URL)
 			if err != nil {
 				t.l.Printf("error when importing accesskeys: %s", err)
 				status.ErrRequest.Wrap(err).WriteTo(w)
 				return
 			}
 			t.br.Reload()
-			status.OK.WriteTo(w)
+			t.reply(w, aks)
 		}),
 	}))
 	t.mux.Handle("/accesskeys/activate", provide.MethodGate(provide.Routes{
