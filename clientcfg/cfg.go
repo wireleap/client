@@ -41,7 +41,7 @@ type Accesskey struct {
 // Circuit describes the configuration of the Wireleap connection circuit.
 type Circuit struct {
 	// Whitelist is the optional user-defined list of relays to use exclusively.
-	Whitelist *[]string `json:"whitelist,omitempty"`
+	Whitelist *[]string `json:"whitelist"`
 	// Hops is the desired number of hops to use for the circuit.
 	Hops int `json:"hops,omitempty"`
 }
