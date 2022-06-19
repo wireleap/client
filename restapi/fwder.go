@@ -34,15 +34,19 @@ type binaryReply struct {
 }
 
 type binaryState struct {
-	Exists  bool `json:"exists"`
-	ChmodX  bool `json:"chmod_x"`
-	Chown0  bool `json:"chown_0"`
-	ChmodUS bool `json:"chmod_us"`
+	// those are sensible for any forwarder
+	Exists bool `json:"exists"`
+	ChmodX bool `json:"chmod_x"`
+	// those are specific to (currently) only tun
+	Chown0  *bool `json:"chown_0,omitempty"`
+	ChmodUS *bool `json:"chmod_us,omitempty"`
 }
 
 type FwderState struct {
 	State string `json:"state"`
 }
+
+func boolptr(x bool) *bool { return &x }
 
 func (t *T) getBinaryState(bin string) (st binaryState) {
 	fi, err := os.Stat(t.br.Fd.Path(bin))
@@ -50,11 +54,15 @@ func (t *T) getBinaryState(bin string) (st binaryState) {
 		return
 	}
 	st.Exists = true
-	if stat, ok := fi.Sys().(*syscall.Stat_t); ok && stat.Uid == 0 {
-		st.Chown0 = true
-	}
 	st.ChmodX = fi.Mode()&0100 != 0
-	st.ChmodUS = fi.Mode()&os.ModeSetuid != 0
+	if bin == fwderPrefix+"tun" {
+		if stat, ok := fi.Sys().(*syscall.Stat_t); ok && stat.Uid == 0 {
+			st.Chown0 = boolptr(true)
+		} else {
+			st.Chown0 = boolptr(false)
+		}
+		st.ChmodUS = boolptr(fi.Mode()&os.ModeSetuid != 0)
+	}
 	return
 }
 
@@ -78,29 +86,26 @@ func (t *T) registerForwarder(name string) {
 		},
 	})
 	t.mux.Handle("/forwarders/"+name, provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		t.br.Fd.Get(&o.Pid, bin+".pid")
 		var fst FwderState
 		if err := cl.Perform(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
-			mu.Lock()
 			o.State = fst.State
-			mu.Unlock()
 		} else {
-			mu.Lock()
-			o.State = "failed"
-			mu.Unlock()
+			o.State = "unknown"
 		}
 		st := t.getBinaryState(bin)
 		// TODO can this be handled in a better way?
-		mu.Lock()
 		switch name {
 		case "socks":
 			o.Address = t.br.Config().Forwarders.Socks.Address
 			o.Binary.Ok = st.Exists && st.ChmodX
 		case "tun":
 			o.Address = t.br.Config().Forwarders.Tun.Address
-			o.Binary.Ok = st.Exists && st.ChmodX && st.Chown0 && st.ChmodUS
+			o.Binary.Ok = st.Exists && st.ChmodX && *st.Chown0 && *st.ChmodUS
 		}
 		o.Binary.State = st
-		mu.Unlock()
 		t.reply(w, o)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/start", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -122,13 +127,13 @@ func (t *T) registerForwarder(name string) {
 		case !st.ChmodX:
 			err = fmt.Errorf("could not execute %s: file is not executable (did you `chmod +x %s`?)", binpath, binpath)
 			return
-		case name == "tun" && !st.Chown0:
+		case name == "tun" && !*st.Chown0:
 			err = fmt.Errorf(
 				"could not execute %s: file is not owned by root (did you `chown 0:0 %s && chmod u+s %s`?)",
 				binpath, binpath, binpath,
 			)
 			return
-		case name == "tun" && !st.ChmodUS:
+		case name == "tun" && !*st.ChmodUS:
 			err = fmt.Errorf("could not execute %s: file is not setuid (did you `chmod u+s %s`?)", binpath, binpath)
 			return
 		}
