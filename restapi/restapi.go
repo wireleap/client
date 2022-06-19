@@ -127,7 +127,17 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 	t.mux.Handle("/reload", provide.MethodGate(provide.Routes{
 		http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t.br.Reload()
-			status.OK.WriteTo(w)
+			circList := []string{}
+			for _, r := range t.br.ActiveCircuit() {
+				circList = append(circList, r.Addr.String())
+			}
+			t.reply(w, StatusReply{
+				Home:    t.br.Fd.Path(),
+				Pid:     os.Getpid(),
+				State:   "active",
+				Broker:  StatusBroker{ActiveCircuit: circList},
+				Upgrade: StatusUpgrade{Required: t.br.IsUpgradeable()},
+			})
 		}),
 	}))
 	t.mux.Handle("/log", provide.MethodGate(provide.Routes{
