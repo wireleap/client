@@ -94,10 +94,6 @@ var MIGRATIONS = []*upgrade.Migration{
 				return fmt.Errorf("could not load config.json.next: %s", err)
 			}
 			c := clientcfg.Defaults()
-			// old timeout field
-			if timeout, ok := oldc["timeout"].(duration.T); ok {
-				c.Broker.Timeout = timeout
-			}
 			// old contract field is ignored/obsolete
 			// old accesskey field
 			if ak, ok := oldc["accesskey"].(clientcfg.Accesskey); ok {
@@ -106,6 +102,10 @@ var MIGRATIONS = []*upgrade.Migration{
 			// old circuit field
 			if circ, ok := oldc["circuit"].(clientcfg.Circuit); ok {
 				c.Broker.Circuit = circ
+			}
+			// old timeout field
+			if timeout, ok := oldc["timeout"].(duration.T); ok {
+				c.Broker.Circuit.Timeout = timeout
 			}
 			// address/port changes are merged automatically
 			if err := f.Set(&c, "config.json.next"); err != nil {
