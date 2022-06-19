@@ -59,6 +59,8 @@ type T struct {
 	pofs []*pof.T
 	// need upgrading?
 	upgrade bool
+	// upgrade val lock (has to be separate from global)
+	uMu sync.Mutex
 }
 
 func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
@@ -313,13 +315,14 @@ func (t *T) Config() *clientcfg.C { return t.cfg }
 func (t *T) SaveConfig() error { return t.Fd.Set(&t.cfg, filenames.Config) }
 
 func (t *T) SetUpgradeable(val bool) {
-	t.mu.Lock()
+	t.uMu.Lock()
 	t.upgrade = val
-	t.mu.Unlock()
+	t.uMu.Unlock()
 }
 
-func (t *T) IsUpgradeable() bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.upgrade
+func (t *T) IsUpgradeable() (r bool) {
+	t.uMu.Lock()
+	r = t.upgrade
+	t.uMu.Unlock()
+	return
 }
