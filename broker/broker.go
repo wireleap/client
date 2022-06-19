@@ -71,7 +71,7 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 		cl: client.New(nil, clientcontract.T, clientdir.T),
 		// cache dns resolution in netstack transport
 		cache: dnscachedial.New(),
-		T:     transport.New(transport.Options{Timeout: time.Duration(cfg.Broker.Timeout)}),
+		T:     transport.New(transport.Options{Timeout: time.Duration(cfg.Broker.Circuit.Timeout)}),
 		cfg:   cfg,
 		l:     l,
 	}
