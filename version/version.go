@@ -107,10 +107,15 @@ var MIGRATIONS = []*upgrade.Migration{
 			if circ, ok := oldc["circuit"].(clientcfg.Circuit); ok {
 				c.Broker.Circuit = circ
 			}
-			// TODO address/port change?
+			// address/port changes are merged automatically
 			if err := f.Set(&c, "config.json.next"); err != nil {
 				return fmt.Errorf("could not save config.json.next: %s", err)
 			}
+			log.Println("NOTE: ports used by Wireleap client have changed as follows:")
+			log.Println("h2c:    13492 -> 13490")
+			log.Println("socks5: 13491 (no change)")
+			log.Println("tun:    13493 -> 13492")
+			log.Println("If you have been depending on the old values please change the configuration accordingly.")
 			return nil
 		},
 		Rollback: func(fsdir.T) error {
