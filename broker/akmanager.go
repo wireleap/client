@@ -12,8 +12,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/wireleap/client/clientlib"
@@ -26,8 +26,8 @@ import (
 	"github.com/wireleap/common/api/status"
 )
 
-func (t *T) download(url string) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+func (t *T) download(u string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -39,23 +39,29 @@ func (t *T) download(url string) ([]byte, error) {
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(
 			"%s download request returned code %d: %s",
-			url, res.StatusCode, res.Status,
+			u, res.StatusCode, res.Status,
 		)
 	}
-	t.l.Printf("Downloading %s...", url)
+	t.l.Printf("Downloading %s...", u)
 	return io.ReadAll(res.Body)
 }
 
-func (t *T) Import(url string) (err error) {
+func (t *T) Import(u url.URL) (err error) {
 	data := []byte{}
 
 	switch {
-	case strings.HasPrefix(url, "http://"):
+	case u.Scheme == "http":
 		return fmt.Errorf("HTTP import URLs are vulnerable to MitM attacks. Use HTTPS instead.")
-	case strings.HasPrefix(url, "https://"):
-		data, err = t.download(url)
+	case u.Scheme == "https":
+		data, err = t.download(u.String())
+	case u.Scheme == "file":
+		data, err = ioutil.ReadFile(u.Path)
+	case !u.IsAbs():
+		return fmt.Errorf("url is not absolute: %s", u.String())
+	case u.Scheme == "":
+		return fmt.Errorf("empty import url scheme in %s", u.String())
 	default:
-		data, err = ioutil.ReadFile(url)
+		return fmt.Errorf("could not parse url: %s", u.String())
 	}
 	if err != nil {
 		return fmt.Errorf("could not read accesskey file: %s", err)
@@ -88,7 +94,7 @@ func (t *T) Import(url string) (err error) {
 			ak.Contract.Endpoint,
 			sc0,
 			ak.Contract.Endpoint,
-			url,
+			u,
 		)
 	}
 
