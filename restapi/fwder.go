@@ -71,7 +71,7 @@ func (t *T) registerForwarder(name string) {
 		bin = fwderPrefix + name
 		o   = fwderReply{
 			Pid:     -1,
-			State:   "unknown",
+			State:   "inactive",
 			Address: "0.0.0.0:0",
 			Binary: binaryReply{
 				Ok: false,
@@ -92,6 +92,8 @@ func (t *T) registerForwarder(name string) {
 		var fst FwderState
 		if err := cl.Perform(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
 			o.State = fst.State
+		} else if o.Pid != -1 && !process.Exists(o.Pid) {
+			o.State = "failed"
 		} else {
 			o.State = "unknown"
 		}
@@ -113,7 +115,7 @@ func (t *T) registerForwarder(name string) {
 		var err error
 		defer func() {
 			if err == nil {
-				status.OK.WriteTo(w)
+				t.reply(w, o)
 			} else {
 				status.ErrRequest.Wrap(err).WriteTo(w)
 			}
@@ -196,7 +198,10 @@ func (t *T) registerForwarder(name string) {
 		)
 		defer func() {
 			if err == nil {
-				status.OK.WriteTo(w)
+				mu.Lock()
+				o.State = "inactive"
+				mu.Unlock()
+				t.reply(w, o)
 			} else {
 				status.ErrRequest.Wrap(err).WriteTo(w)
 			}
@@ -214,6 +219,9 @@ func (t *T) registerForwarder(name string) {
 				return
 			}
 		}
+		mu.Lock()
+		o.State = "deactivating"
+		mu.Unlock()
 		for i := 0; i < 30; i++ {
 			if !process.Exists(pid) {
 				log.Printf("stopped %s daemon (was pid %d)", bin, pid)
