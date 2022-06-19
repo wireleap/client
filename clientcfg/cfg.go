@@ -49,9 +49,14 @@ type Circuit struct {
 // Forwarders describes the settings of the available forwarders.
 type Forwarders struct {
 	// Socks is the SOCKSv5 TCP and UDP listening address.
-	Socks *string `json:"socks,omitempty"`
+	Socks Forwarder `json:"socks,omitempty"`
 	// Tun is the listening address configuration for wireleap_tun.
-	Tun *string `json:"tun,omitempty"`
+	Tun Forwarder `json:"tun,omitempty"`
+}
+
+// Forwarder describes a single forwarder.
+type Forwarder struct {
+	Address string `json:"address,omitempty"`
 }
 
 // Defaults provides a config with sane defaults whenever possible.
@@ -70,8 +75,8 @@ func Defaults() C {
 			Circuit: Circuit{Hops: 1},
 		},
 		Forwarders: Forwarders{
-			Socks: &sksaddr,
-			Tun:   &tunaddr,
+			Socks: Forwarder{Address: sksaddr},
+			Tun:   Forwarder{Address: tunaddr},
 		},
 	}
 }
@@ -97,7 +102,7 @@ func (c *C) Metadata() []*Meta {
 		{"broker.circuit.hops", "int", "Number of relay hops to use in a circuit", &c.Broker.Circuit.Hops, false},
 		{"broker.circuit.whitelist", "list", "Whitelist of relays to use", &c.Broker.Circuit.Whitelist, false},
 		{"broker.accesskey.use_on_demand", "bool", "Activate accesskeys as needed", &c.Broker.Accesskey.UseOnDemand, false},
-		{"forwarders.socks", "str", "SOCKS5 proxy address of wireleap daemon", &c.Forwarders.Socks, true},
-		{"forwarders.tun", "str", "TUN device address (not loopback)", &c.Forwarders.Tun, true},
+		{"forwarders.socks.address", "str", "SOCKS5 proxy address of wireleap daemon", &c.Forwarders.Socks, true},
+		{"forwarders.tun.address", "str", "TUN device address (not loopback)", &c.Forwarders.Tun, true},
 	}
 }
