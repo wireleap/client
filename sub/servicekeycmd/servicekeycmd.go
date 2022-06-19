@@ -3,7 +3,10 @@
 package servicekeycmd
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -25,14 +28,24 @@ func Cmd() *cli.Subcmd {
 			log.Fatal(err)
 		}
 		cl := client.New(nil)
-		var st status.T
-		cl.Perform(
+		var o json.RawMessage
+		err = cl.Perform(
 			http.MethodPost,
 			"http://"+*c.Address+"/api/accesskeys/activate",
 			nil,
-			&st,
+			&o,
 		)
-		log.Println(st)
+		if err != nil {
+			st := &status.T{}
+			if errors.As(err, &st) {
+				fmt.Println(st)
+				return
+			} else {
+				log.Printf("error while executing request: %s", err)
+			}
+		} else {
+			fmt.Println(string(o))
+		}
 	}
 
 	r := &cli.Subcmd{

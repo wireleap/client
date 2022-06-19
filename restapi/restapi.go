@@ -103,10 +103,10 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 		http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if err := t.br.Activate(); err != nil {
 				t.l.Printf("error when activating new accesskey: %s", err)
-				status.ErrRequest.WriteTo(w)
+				status.ErrRequest.Wrap(err).WriteTo(w)
 				return
 			}
-			status.OK.WriteTo(w)
+			t.reply(w, t.accesskeysFromSks(t.br.CurrentSK()))
 		}),
 	}))
 	t.mux.Handle("/status", provide.MethodGate(provide.Routes{

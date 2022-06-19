@@ -275,11 +275,8 @@ func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
 
 func (t *T) ContractInfo() *contractinfo.T { return t.ci }
 
-func (t *T) Reload() {
+func (t *T) reload() {
 	t.l.Println("reloading config")
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	cfg := clientcfg.Defaults()
 	err := t.Fd.Get(&cfg, filenames.Config)
 	if err != nil {
@@ -300,6 +297,12 @@ func (t *T) Reload() {
 	}
 	// reset circuit
 	t.circ = nil
+}
+
+func (t *T) Reload() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.reload()
 }
 
 func (t *T) Shutdown() {
