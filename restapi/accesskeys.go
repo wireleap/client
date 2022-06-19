@@ -22,6 +22,9 @@ type accesskeyReply struct {
 func (t *T) accesskeysFromSks(sks ...*servicekey.T) (rs []*accesskeyReply) {
 	ci := t.br.ContractInfo()
 	for _, sk := range sks {
+		if sk == nil {
+			continue
+		}
 		state := "active"
 		if sk.IsExpiredAt(time.Now().Unix()) {
 			state = "expired"
@@ -39,6 +42,9 @@ func (t *T) accesskeysFromSks(sks ...*servicekey.T) (rs []*accesskeyReply) {
 func (t *T) accesskeysFromPofs(pofs ...*pof.T) (rs []*accesskeyReply) {
 	ci := t.br.ContractInfo()
 	for _, p := range pofs {
+		if p == nil {
+			continue
+		}
 		rs = append(rs, &accesskeyReply{
 			Contract:   ci.Endpoint,
 			Duration:   int64(ci.Servicekey.Duration),
