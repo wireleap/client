@@ -23,8 +23,6 @@ type C struct {
 type Broker struct {
 	// Address describes the h2c listening address of the broker.
 	Address *string `json:"address,omitempty"`
-	// Timeout is the dial timeout for relay connections.
-	Timeout duration.T `json:"timeout,omitempty"`
 	// Accesskey is the section dealing with accesskey configuration.
 	Accesskey Accesskey `json:"accesskey,omitempty"`
 	// Circuit describes the configuration of the Wireleap connection circuit.
@@ -40,6 +38,8 @@ type Accesskey struct {
 
 // Circuit describes the configuration of the Wireleap connection circuit.
 type Circuit struct {
+	// Timeout is the dial timeout for relay connections.
+	Timeout duration.T `json:"timeout,omitempty"`
 	// Whitelist is the optional user-defined list of relays to use exclusively.
 	Whitelist *[]string `json:"whitelist"`
 	// Hops is the desired number of hops to use for the circuit.
@@ -71,8 +71,10 @@ func Defaults() C {
 		Address: &restaddr,
 		Broker: Broker{
 			Address: &brokaddr,
-			Timeout: duration.T(time.Second * 5),
-			Circuit: Circuit{Hops: 1},
+			Circuit: Circuit{
+				Timeout: duration.T(time.Second * 5),
+				Hops:    1,
+			},
 		},
 		Forwarders: Forwarders{
 			Socks: Forwarder{Address: sksaddr},
@@ -98,7 +100,7 @@ func (c *C) Metadata() []*Meta {
 	return []*Meta{
 		{"address", "str", "H2C REST API address of wireleap daemon", &c.Address, true},
 		{"broker.address", "str", "H2C proxy address of wireleap daemon", &c.Broker.Address, true},
-		{"broker.timeout", "str", "Dial timeout duration", &c.Broker.Timeout, true},
+		{"broker.circuit.timeout", "str", "Dial timeout duration", &c.Broker.Circuit.Timeout, true},
 		{"broker.circuit.hops", "int", "Number of relay hops to use in a circuit", &c.Broker.Circuit.Hops, false},
 		{"broker.circuit.whitelist", "list", "Whitelist of relays to use", &c.Broker.Circuit.Whitelist, false},
 		{"broker.accesskey.use_on_demand", "bool", "Activate accesskeys as needed", &c.Broker.Accesskey.UseOnDemand, false},
