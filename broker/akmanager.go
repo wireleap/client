@@ -288,37 +288,35 @@ func (t *T) Activate() (err error) {
 	case t.cfg.Broker.Accesskey.UseOnDemand:
 		return fmt.Errorf("accesskey.use_on_demand is enabled in config.json; refusing to run")
 	}
-	var ps []*pof.T
-	if err = t.Fd.Get(&ps, "pofs.json"); err != nil {
-		return fmt.Errorf("could not read pofs from pofs.json: %s", err)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.sk == nil {
+		if err = t.Fd.Get(t.sk, filenames.Servicekey); err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, os.ErrNotExist) {
+				// this is fine
+			} else {
+				return fmt.Errorf(
+					"error reading old %s",
+					filenames.Servicekey,
+				)
+			}
+		}
 	}
-	sk := &servicekey.T{}
-	if err = t.Fd.Get(sk, filenames.Servicekey); err != nil {
-		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrNotExist) {
-			// this is fine
-		} else {
-			return fmt.Errorf(
-				"error reading old %s",
-				filenames.Servicekey,
-			)
-		}
-	} else {
-		if !sk.IsExpiredAt(time.Now().Unix()) {
-			return fmt.Errorf(
-				"refusing to replace non-expired servicekey: %s expires at %s",
-				filenames.Servicekey,
-				time.Unix(sk.Contract.SettlementOpen, 0).String(),
-			)
-		}
+	if t.sk != nil && t.sk.Contract != nil && !t.sk.IsExpiredAt(time.Now().Unix()) {
+		return fmt.Errorf(
+			"refusing to replace non-expired servicekey: %s expires at %s",
+			filenames.Servicekey,
+			time.Unix(t.sk.Contract.SettlementOpen, 0).String(),
+		)
 	}
 	// discard old servicekey & get a new one
-	if sk, err = t.RefreshSK(); err != nil {
+	if t.sk, err = t.RefreshSK(); err != nil {
 		return fmt.Errorf("error while activating servicekey with pof: %s", err)
 	}
-	if err = t.Fd.Set(sk, filenames.Servicekey); err != nil {
+	if err = t.Fd.Set(t.sk, filenames.Servicekey); err != nil {
 		return fmt.Errorf("could not write new servicekey: %s", err)
 	}
-	t.Reload()
+	t.reload()
 	return
 }
 
