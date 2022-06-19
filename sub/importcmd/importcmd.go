@@ -3,7 +3,10 @@
 package importcmd
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -28,8 +31,7 @@ func Cmd() *cli.Subcmd {
 		Sections: []cli.Section{{
 			Title: "Arguments",
 			Entries: []cli.Entry{
-				{Key: "FILE", Value: "Path to accesskeys file, or - to read standard input"},
-				{Key: "URL", Value: "URL to download accesskeys (https required)"},
+				{Key: "URL", Value: "URL to download accesskeys (scheme: https or file)"},
 			},
 		}},
 	}
@@ -39,7 +41,6 @@ func Cmd() *cli.Subcmd {
 			r.Usage()
 			os.Exit(1)
 		}
-
 		c := clientcfg.Defaults()
 		err := fm.Get(&c, filenames.Config)
 		if err != nil {
@@ -49,22 +50,28 @@ func Cmd() *cli.Subcmd {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		cl := client.New(nil)
-
-		var st status.T
-
-		cl.Perform(
+		var o json.RawMessage
+		err = cl.Perform(
 			http.MethodPost,
 			"http://"+*c.Address+"/api/accesskeys/import",
 			restapi.AccesskeyImportRequest{
 				URL: &texturl.URL{*u},
 			},
-			&st,
+			&o,
 		)
-
-		log.Println(st)
+		if err != nil {
+			st := &status.T{}
+			if errors.As(err, &st) {
+				fmt.Println(st)
+				return
+			} else {
+				log.Printf("error while executing request: %s", err)
+			}
+		} else {
+			fmt.Println(string(o))
+		}
 	}
-	r.SetMinimalUsage("FILE|URL")
+	r.SetMinimalUsage("URL")
 	return r
 }

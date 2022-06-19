@@ -86,7 +86,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.l.Printf("error when reading accesskeys import request body: %s", err)
-				status.ErrRequest.WriteTo(w)
+				status.ErrRequest.Wrap(err).WriteTo(w)
 				return
 			}
 			air := AccesskeyImportRequest{}
@@ -95,9 +95,9 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.WriteTo(w)
 				return
 			}
-			if err = t.br.Import(air.URL.String()); err != nil {
+			if err = t.br.Import(air.URL.URL); err != nil {
 				t.l.Printf("error when importing accesskeys: %s", err)
-				status.ErrRequest.WriteTo(w)
+				status.ErrRequest.Wrap(err).WriteTo(w)
 				return
 			}
 			t.br.Reload()
