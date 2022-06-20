@@ -28,11 +28,11 @@ import (
 	"github.com/wireleap/client/sub/sockscmd"
 	"github.com/wireleap/client/sub/startcmd"
 	"github.com/wireleap/client/sub/statuscmd"
+	"github.com/wireleap/client/sub/stopcmd"
 	"github.com/wireleap/client/sub/tuncmd"
 	"github.com/wireleap/client/version"
 	"github.com/wireleap/common/cli/commonsub/reloadcmd"
 	"github.com/wireleap/common/cli/commonsub/restartcmd"
-	"github.com/wireleap/common/cli/commonsub/stopcmd"
 )
 
 const binname = "wireleap"
