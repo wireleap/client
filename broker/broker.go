@@ -78,7 +78,7 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 	var err error
 	if err = t.Fd.Get(&t.pofs, filenames.Pofs); err != nil {
 		if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrNotExist) {
-			t.l.Fatal("could not get previous pofs to initialize accesskeys: %s", err)
+			t.l.Fatalf("could not get previous pofs to initialize accesskeys: %s", err)
 		}
 	}
 	if cfg.Broker.Address == nil {
