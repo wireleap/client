@@ -10,7 +10,6 @@ import (
 	"github.com/wireleap/common/api/interfaces/clientrelay"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/commonsub/commonlib"
-	"github.com/wireleap/common/cli/commonsub/logcmd"
 	"github.com/wireleap/common/cli/commonsub/migratecmd"
 	"github.com/wireleap/common/cli/commonsub/rollbackcmd"
 	"github.com/wireleap/common/cli/commonsub/superviseupgradecmd"
@@ -18,21 +17,20 @@ import (
 	"github.com/wireleap/common/cli/commonsub/versioncmd"
 	"github.com/wireleap/common/cli/upgrade"
 
+	"github.com/wireleap/client/sub/accesskeyscmd"
 	"github.com/wireleap/client/sub/configcmd"
 	"github.com/wireleap/client/sub/execcmd"
-	"github.com/wireleap/client/sub/importcmd"
-	"github.com/wireleap/client/sub/infocmd"
 	"github.com/wireleap/client/sub/initcmd"
 	"github.com/wireleap/client/sub/interceptcmd"
-	"github.com/wireleap/client/sub/servicekeycmd"
+	"github.com/wireleap/client/sub/logcmd"
+	"github.com/wireleap/client/sub/reloadcmd"
+	"github.com/wireleap/client/sub/restartcmd"
 	"github.com/wireleap/client/sub/sockscmd"
 	"github.com/wireleap/client/sub/startcmd"
 	"github.com/wireleap/client/sub/statuscmd"
 	"github.com/wireleap/client/sub/stopcmd"
 	"github.com/wireleap/client/sub/tuncmd"
 	"github.com/wireleap/client/version"
-	"github.com/wireleap/common/cli/commonsub/reloadcmd"
-	"github.com/wireleap/common/cli/commonsub/restartcmd"
 )
 
 const binname = "wireleap"
@@ -44,17 +42,17 @@ func main() {
 		Subcmds: []*cli.Subcmd{
 			initcmd.Cmd(),
 			configcmd.Cmd(fm),
-			importcmd.Cmd(),
-			servicekeycmd.Cmd(),
+			accesskeyscmd.Cmd(),
 			startcmd.Cmd(binname),
 			statuscmd.Cmd(binname),
 			reloadcmd.Cmd(binname),
 			restartcmd.Cmd(binname, startcmd.Cmd(binname).Run, stopcmd.Cmd(binname).Run),
 			stopcmd.Cmd(binname),
-			execcmd.Cmd(),
-			interceptcmd.Cmd(),
+			logcmd.Cmd(binname),
 			tuncmd.Cmd(),
 			sockscmd.Cmd(),
+			interceptcmd.Cmd(),
+			execcmd.Cmd(),
 			upgradecmd.Cmd(
 				binname,
 				upgrade.ExecutorSupervised,
@@ -71,8 +69,6 @@ func main() {
 				PostHook:   version.PostUpgradeHook,
 			}),
 			migratecmd.Cmd(binname, version.MIGRATIONS, version.VERSION),
-			infocmd.Cmd(),
-			logcmd.Cmd(binname),
 			versioncmd.Cmd(
 				&version.VERSION,
 				clientdir.T,

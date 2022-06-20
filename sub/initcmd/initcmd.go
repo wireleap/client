@@ -20,7 +20,7 @@ func Cmd() *cli.Subcmd {
 	force := fs.Bool("force-unpack-only", false, "Overwrite embedded files only")
 	r := &cli.Subcmd{
 		FlagSet: fs,
-		Desc:    "Initialize wireleap directory",
+		Desc:    "Initialize wireleap home directory",
 		Run: func(fm fsdir.T) {
 			if err := cli.UnpackEmbedded(embedded.FS, fm, *force); err != nil {
 				log.Fatalf("error while unpacking embedded files: %s", err)

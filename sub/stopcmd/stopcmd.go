@@ -19,7 +19,7 @@ import (
 func Cmd(arg0 string) *cli.Subcmd {
 	return &cli.Subcmd{
 		FlagSet: flag.NewFlagSet("stop", flag.ExitOnError),
-		Desc:    fmt.Sprintf("Stop %s daemon", arg0),
+		Desc:    fmt.Sprintf("Stop %s controller daemon", arg0),
 		Run: func(fm fsdir.T) {
 			var (
 				pid     int

@@ -18,19 +18,21 @@ import (
 
 func Cmd() *cli.Subcmd {
 	fs := flag.NewFlagSet("intercept", flag.ExitOnError)
-
-	run := func(fm fsdir.T) {
+	r := &cli.Subcmd{
+		FlagSet: fs,
+		Desc:    "Run executable and redirect connections (req. SOCKS forwarder)",
+	}
+	r.SetMinimalUsage("[args]")
+	r.Run = func(fm fsdir.T) {
 		c := clientcfg.Defaults()
 		err := fm.Get(&c, filenames.Config)
-
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		if fs.NArg() == 0 {
-			fs.Usage()
+			r.Usage()
+			os.Exit(1)
 		}
-
 		switch runtime.GOOS {
 		case "linux":
 			lib := fm.Path("wireleap_intercept.so")
@@ -58,13 +60,5 @@ func Cmd() *cli.Subcmd {
 			log.Fatal("unsupported OS:", runtime.GOOS)
 		}
 	}
-
-	r := &cli.Subcmd{
-		FlagSet: fs,
-		Desc:    "Run executable and redirect connections to wireleap daemon",
-		Run:     run,
-	}
-
-	r.SetMinimalUsage("[args]")
 	return r
 }
