@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -72,6 +73,20 @@ func Cmd() (r *cli.Subcmd) {
 			// specially handled below
 		case "log":
 			url += "/log"
+			req, err := cl.NewRequest(meth, url, nil)
+			if err != nil {
+				log.Fatalf("could not create request to %s: %s", url, err)
+			}
+			res, err := cl.PerformRequestNoParse(req)
+			if err != nil {
+				log.Fatalf("could not perform request to %s: %s", url, err)
+			}
+			b, err := io.ReadAll(res.Body)
+			if err != nil {
+				log.Fatalf("could not read %s request body: %s", url, err)
+			}
+			os.Stdout.Write(b)
+			return
 		default:
 			log.Fatalf("unknown %s subcommand: %s", name, cmd)
 		}
@@ -86,8 +101,7 @@ func Cmd() (r *cli.Subcmd) {
 			fmt.Println(string(st))
 			return
 		}
-		fmt.Printf("error while calling %s: %s\n", url, err)
-		os.Exit(1)
+		log.Fatalf("error while calling %s: %s", url, err)
 	}
 	return
 }
