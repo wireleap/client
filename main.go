@@ -14,7 +14,6 @@ import (
 	"github.com/wireleap/common/cli/commonsub/rollbackcmd"
 	"github.com/wireleap/common/cli/commonsub/superviseupgradecmd"
 	"github.com/wireleap/common/cli/commonsub/upgradecmd"
-	"github.com/wireleap/common/cli/commonsub/versioncmd"
 	"github.com/wireleap/common/cli/upgrade"
 
 	"github.com/wireleap/client/sub/accesskeyscmd"
@@ -30,6 +29,7 @@ import (
 	"github.com/wireleap/client/sub/statuscmd"
 	"github.com/wireleap/client/sub/stopcmd"
 	"github.com/wireleap/client/sub/tuncmd"
+	"github.com/wireleap/client/sub/versioncmd"
 	"github.com/wireleap/client/version"
 )
 
