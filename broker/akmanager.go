@@ -69,7 +69,7 @@ func (t *T) Import(u url.URL) (ak *accesskey.T, err error) {
 	ak = &accesskey.T{}
 	err = json.Unmarshal(data, &ak)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal accesskey file: ", err)
+		return nil, fmt.Errorf("could not unmarshal accesskey file: %s", err)
 	}
 	switch {
 	case ak == nil,
@@ -94,7 +94,7 @@ func (t *T) Import(u url.URL) (ak *accesskey.T, err error) {
 			ak.Contract.Endpoint,
 			sc0,
 			ak.Contract.Endpoint,
-			u,
+			u.String(),
 		)
 	}
 
