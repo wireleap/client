@@ -26,7 +26,7 @@ const bin = "wireleap_" + name
 func Cmd() (r *cli.Subcmd) {
 	r = &cli.Subcmd{
 		FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
-		Desc:    "Control tun device",
+		Desc:    "Control TUN device forwarder",
 		Sections: []cli.Section{{
 			Title: "Commands",
 			Entries: []cli.Entry{

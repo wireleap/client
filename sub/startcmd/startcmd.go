@@ -68,7 +68,7 @@ func Cmd(arg0 string) *cli.Subcmd {
 	fg := fs.Bool("fg", false, "Run in foreground, don't detach")
 	r := &cli.Subcmd{
 		FlagSet: fs,
-		Desc:    fmt.Sprintf("Start %s daemon", arg0),
+		Desc:    fmt.Sprintf("Start %s controller daemon", arg0),
 		Run: func(fm fsdir.T) {
 			var err error
 			c := clientcfg.Defaults()
@@ -199,7 +199,6 @@ func Cmd(arg0 string) *cli.Subcmd {
 		},
 	}
 	r.Writer = tabwriter.NewWriter(r.FlagSet.Output(), 6, 8, 1, ' ', 0)
-	r.Desc = fmt.Sprintf("%s %s", r.Desc, "(Wireleap connection broker)")
 	r.Sections = []cli.Section{
 		{
 			Title: "Signals",

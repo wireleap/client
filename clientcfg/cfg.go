@@ -98,13 +98,13 @@ type Meta struct {
 
 func (c *C) Metadata() []*Meta {
 	return []*Meta{
-		{"address", "str", "H2C REST API address of wireleap daemon", &c.Address, true},
-		{"broker.address", "str", "H2C proxy address of wireleap daemon", &c.Broker.Address, true},
-		{"broker.circuit.timeout", "str", "Dial timeout duration", &c.Broker.Circuit.Timeout, true},
-		{"broker.circuit.hops", "int", "Number of relay hops to use in a circuit", &c.Broker.Circuit.Hops, false},
-		{"broker.circuit.whitelist", "list", "Whitelist of relays to use", &c.Broker.Circuit.Whitelist, false},
+		{"address", "str", "Controller address", &c.Address, true},
+		{"broker.address", "str", "Override default broker address", &c.Broker.Address, true},
 		{"broker.accesskey.use_on_demand", "bool", "Activate accesskeys as needed", &c.Broker.Accesskey.UseOnDemand, false},
-		{"forwarders.socks.address", "str", "SOCKS5 proxy address of wireleap daemon", &c.Forwarders.Socks, true},
+		{"broker.circuit.timeout", "str", "Dial timeout duration", &c.Broker.Circuit.Timeout, true},
+		{"broker.circuit.hops", "int", "Number of relays to use in a circuit", &c.Broker.Circuit.Hops, false},
+		{"broker.circuit.whitelist", "list", "Relay addresses to use in circuit", &c.Broker.Circuit.Whitelist, false},
+		{"forwarders.socks.address", "str", "SOCKSv5 proxy address", &c.Forwarders.Socks, true},
 		{"forwarders.tun.address", "str", "TUN device address (not loopback)", &c.Forwarders.Tun, true},
 	}
 }
