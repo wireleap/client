@@ -111,7 +111,6 @@ func (t *T) registerForwarder(name string) {
 		t.reply(w, o)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/start", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var pid int
 		var err error
 		defer func() {
 			if err == nil {
@@ -146,7 +145,7 @@ func (t *T) registerForwarder(name string) {
 			"WIRELEAP_ADDR_TUN="+t.br.Config().Forwarders.Tun.Address,
 			"WIRELEAP_ADDR_SOCKS="+t.br.Config().Forwarders.Socks.Address,
 		)
-		if err = t.br.Fd.Get(&pid, bin+".pid"); err == nil && process.Exists(pid) {
+		if err = t.br.Fd.Get(&o.Pid, bin+".pid"); err == nil && process.Exists(o.Pid) {
 			err = fmt.Errorf("%s daemon is already running!", bin)
 			return
 		}
@@ -176,6 +175,9 @@ func (t *T) registerForwarder(name string) {
 			bin, cmd.Process.Pid, logpath,
 		)
 		t.br.Fd.Set(cmd.Process.Pid, bin+".pid")
+		mu.Lock()
+		o.Pid = cmd.Process.Pid
+		mu.Unlock()
 		// poll state until it's conclusive
 		var fst FwderState
 		for i := 0; i < 10; i++ {
