@@ -68,8 +68,9 @@ func (t *T) getBinaryState(bin string) (st binaryState) {
 
 func (t *T) registerForwarder(name string) {
 	var (
-		bin = fwderPrefix + name
-		o   = fwderReply{
+		bin     = fwderPrefix + name
+		pidfile = bin + ".pid"
+		o       = fwderReply{
 			Pid:     -1,
 			State:   "inactive",
 			Address: "0.0.0.0:0",
@@ -88,14 +89,18 @@ func (t *T) registerForwarder(name string) {
 	t.mux.Handle("/forwarders/"+name, provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
-		t.br.Fd.Get(&o.Pid, bin+".pid")
+		t.br.Fd.Get(&o.Pid, pidfile)
 		var fst FwderState
-		if err := cl.Perform(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
-			o.State = fst.State
-		} else if o.Pid != -1 && !process.Exists(o.Pid) {
-			o.State = "failed"
-		} else {
-			o.State = "unknown"
+		for i := 0; i < 10; i++ {
+			if err := cl.PerformOnce(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
+				o.State = fst.State
+				break
+			} else if o.Pid != -1 && !process.Exists(o.Pid) && o.State != "failed" {
+				o.State = "inactive"
+			} else {
+				o.State = "unknown"
+			}
+			time.Sleep(100 * time.Millisecond)
 		}
 		st := t.getBinaryState(bin)
 		// TODO can this be handled in a better way?
@@ -145,7 +150,7 @@ func (t *T) registerForwarder(name string) {
 			"WIRELEAP_ADDR_TUN="+t.br.Config().Forwarders.Tun.Address,
 			"WIRELEAP_ADDR_SOCKS="+t.br.Config().Forwarders.Socks.Address,
 		)
-		if err = t.br.Fd.Get(&o.Pid, bin+".pid"); err == nil && process.Exists(o.Pid) {
+		if err = t.br.Fd.Get(&o.Pid, pidfile); err == nil && process.Exists(o.Pid) {
 			err = fmt.Errorf("%s daemon is already running!", bin)
 			return
 		}
@@ -174,33 +179,46 @@ func (t *T) registerForwarder(name string) {
 			"starting %s with pid %d, writing to %s...",
 			bin, cmd.Process.Pid, logpath,
 		)
-		t.br.Fd.Set(cmd.Process.Pid, bin+".pid")
+		t.br.Fd.Set(cmd.Process.Pid, pidfile)
 		mu.Lock()
 		o.Pid = cmd.Process.Pid
 		mu.Unlock()
 		// poll state until it's conclusive
 		var fst FwderState
 		for i := 0; i < 10; i++ {
-			if err = cl.Perform(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
+			if err = cl.PerformOnce(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
 				mu.Lock()
 				o.State = fst.State
 				mu.Unlock()
+				break
 			} else {
 				mu.Lock()
 				o.State = "failed"
 				mu.Unlock()
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
+		go func() {
+			// reap process so it doesn't turn zombie
+			if err = cmd.Wait(); err != nil {
+				mu.Lock()
+				o.Pid = -1
+				o.State = "failed"
+				mu.Unlock()
+			} else {
+				mu.Lock()
+				o.Pid = -1
+				o.State = "inactive"
+				mu.Unlock()
+			}
+		}()
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/stop", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var (
-			pid     int
-			err     error
-			pidfile = bin + ".pid"
-		)
+		var err error
 		defer func() {
 			if err == nil {
 				mu.Lock()
+				o.Pid = -1
 				o.State = "inactive"
 				mu.Unlock()
 				t.reply(w, o)
@@ -208,16 +226,17 @@ func (t *T) registerForwarder(name string) {
 				status.ErrRequest.Wrap(err).WriteTo(w)
 			}
 		}()
-		if err = t.br.Fd.Get(&pid, pidfile); err != nil {
+		if err = t.br.Fd.Get(&o.Pid, pidfile); err != nil {
 			err = fmt.Errorf(
 				"could not get pid of %s from %s: %s",
 				bin, t.br.Fd.Path(pidfile), err,
 			)
 			return
 		}
-		if process.Exists(pid) {
-			if err = process.Term(pid); err != nil {
-				err = fmt.Errorf("could not terminate %s pid %d: %s", bin, pid, err)
+		if process.Exists(o.Pid) {
+			log.Println(o.Pid, "exists")
+			if err = process.Term(o.Pid); err != nil {
+				err = fmt.Errorf("could not terminate %s pid %d: %s", bin, o.Pid, err)
 				return
 			}
 		}
@@ -225,20 +244,20 @@ func (t *T) registerForwarder(name string) {
 		o.State = "deactivating"
 		mu.Unlock()
 		for i := 0; i < 30; i++ {
-			if !process.Exists(pid) {
-				log.Printf("stopped %s daemon (was pid %d)", bin, pid)
+			if !process.Exists(o.Pid) {
+				log.Printf("stopped %s daemon (was pid %d)", bin, o.Pid)
 				t.br.Fd.Del(pidfile)
 				return
 			}
 			time.Sleep(100 * time.Millisecond)
 		}
-		process.Kill(pid)
+		process.Kill(o.Pid)
 		time.Sleep(100 * time.Millisecond)
-		if process.Exists(pid) {
-			err = fmt.Errorf("timed out waiting for %s (pid %d) to shut down -- process still alive!", bin, pid)
+		if process.Exists(o.Pid) {
+			err = fmt.Errorf("timed out waiting for %s (pid %d) to shut down -- process still alive!", bin, o.Pid)
 			return
 		}
-		log.Printf("stopped %s daemon (was pid %d)", bin, pid)
+		log.Printf("stopped %s daemon (was pid %d)", bin, o.Pid)
 		t.br.Fd.Del(pidfile)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/log", provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
