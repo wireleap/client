@@ -33,7 +33,7 @@ type Build struct {
 }
 
 type Platform struct {
-	Os   string `json:"linux"`
+	Os   string `json:"os"`
 	Arch string `json:"arch"`
 }
 
