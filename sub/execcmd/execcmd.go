@@ -22,9 +22,15 @@ func Cmd() *cli.Subcmd {
 	fs := flag.NewFlagSet("exec", flag.ExitOnError)
 	r := &cli.Subcmd{
 		FlagSet: fs,
-		Desc:    "Execute script from scripts directory",
+		Desc:    "Execute script from scripts directory (req. SOCKS forwarder)",
+		Sections: []cli.Section{{
+			Title: "Commands",
+			Entries: []cli.Entry{
+				{Key: "list", Value: "List available scripts in scripts directory"},
+			},
+		}},
 	}
-	r.SetMinimalUsage("FILENAME")
+	r.SetMinimalUsage("COMMAND|FILENAME")
 	r.Run = func(fm fsdir.T) {
 		c := clientcfg.Defaults()
 		err := fm.Get(&c, filenames.Config)

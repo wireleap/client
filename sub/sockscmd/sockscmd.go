@@ -28,7 +28,7 @@ const bin = "wireleap_" + name
 func Cmd() (r *cli.Subcmd) {
 	r = &cli.Subcmd{
 		FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
-		Desc:    "Control SOCKSv5 forwarder",
+		Desc:    "Control SOCKSv5 proxy forwarder",
 		Sections: []cli.Section{{
 			Title: "Commands",
 			Entries: []cli.Entry{

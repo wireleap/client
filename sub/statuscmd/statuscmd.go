@@ -14,6 +14,7 @@ import (
 
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/filenames"
+	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -23,21 +24,25 @@ import (
 func Cmd(arg0 string) *cli.Subcmd {
 	r := &cli.Subcmd{
 		FlagSet: flag.NewFlagSet("status", flag.ExitOnError),
-		Desc:    fmt.Sprintf("Report %s daemon status", arg0),
+		Desc:    fmt.Sprintf("Report %s controller daemon status", arg0),
 		Sections: []cli.Section{{
 			Title: "Exit codes",
 			Entries: []cli.Entry{
 				{
 					Key:   "0",
-					Value: fmt.Sprintf("%s is running", arg0),
+					Value: fmt.Sprintf("%s controller is active", arg0),
 				},
 				{
 					Key:   "1",
-					Value: fmt.Sprintf("%s is not running", arg0),
+					Value: fmt.Sprintf("%s controller is inactive", arg0),
 				},
 				{
 					Key:   "2",
-					Value: fmt.Sprintf("could not tell if %s is running or not", arg0),
+					Value: fmt.Sprintf("%s controller is activating or deactivating", arg0),
+				},
+				{
+					Key:   "3",
+					Value: fmt.Sprintf("%s controller failed or state is unknown", arg0),
 				},
 			},
 		}},
@@ -76,6 +81,23 @@ func Cmd(arg0 string) *cli.Subcmd {
 						log.Fatalf("could not get process status via API: %s", err)
 					}
 					fmt.Printf(string(st))
+					var str restapi.StatusReply
+					if err = json.Unmarshal(st, &str); err != nil {
+						log.Printf("could not unmarshal status reply, assuming state=unknown")
+						os.Exit(3)
+					}
+					var exit int
+					switch str.State {
+					case "active":
+						exit = 0
+					case "inactive":
+						exit = 1
+					case "activating", "deactivating":
+						exit = 2
+					default:
+						exit = 3
+					}
+					os.Exit(exit)
 				} else {
 					// pidfile was not cleaned up ...
 					text, status = fmt.Sprintf(
