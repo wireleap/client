@@ -4,7 +4,7 @@ package restapi
 
 import "github.com/blang/semver"
 
-const VERSION_STRING = "0.0.1"
+const VERSION_STRING = "0.1.0"
 
 var VERSION = semver.MustParse(VERSION_STRING)
 
