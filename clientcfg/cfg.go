@@ -104,7 +104,7 @@ func (c *C) Metadata() []*Meta {
 		{"broker.circuit.timeout", "str", "Dial timeout duration", &c.Broker.Circuit.Timeout, true},
 		{"broker.circuit.hops", "int", "Number of relays to use in a circuit", &c.Broker.Circuit.Hops, false},
 		{"broker.circuit.whitelist", "list", "Relay addresses to use in circuit", &c.Broker.Circuit.Whitelist, false},
-		{"forwarders.socks.address", "str", "SOCKSv5 proxy address", &c.Forwarders.Socks, true},
-		{"forwarders.tun.address", "str", "TUN device address (not loopback)", &c.Forwarders.Tun, true},
+		{"forwarders.socks.address", "str", "SOCKSv5 proxy address", &c.Forwarders.Socks.Address, true},
+		{"forwarders.tun.address", "str", "TUN device address (not loopback)", &c.Forwarders.Tun.Address, true},
 	}
 }
