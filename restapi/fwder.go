@@ -74,12 +74,24 @@ func (t *T) registerForwarder(name string) {
 			Pid:     -1,
 			State:   "inactive",
 			Address: "0.0.0.0:0",
-			Binary: binaryReply{
-				Ok: false,
-			},
+			Binary:  binaryReply{},
 		}
-		mu sync.Mutex
-		cl = client.New(nil)
+		mu              sync.Mutex
+		cl              = client.New(nil)
+		syncBinaryState = func() {
+			// NOTE this does not do any locking. locking by the caller is expected
+			st := t.getBinaryState(bin)
+			// TODO can this be handled in a better way?
+			switch name {
+			case "socks":
+				o.Address = t.br.Config().Forwarders.Socks.Address
+				o.Binary.Ok = st.Exists && st.ChmodX
+			case "tun":
+				o.Address = t.br.Config().Forwarders.Tun.Address
+				o.Binary.Ok = st.Exists && st.ChmodX && *st.Chown0 && *st.ChmodUS
+			}
+			o.Binary.State = st
+		}
 	)
 	cl.SetTransport(&http.Transport{
 		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -102,17 +114,7 @@ func (t *T) registerForwarder(name string) {
 			}
 			time.Sleep(100 * time.Millisecond)
 		}
-		st := t.getBinaryState(bin)
-		// TODO can this be handled in a better way?
-		switch name {
-		case "socks":
-			o.Address = t.br.Config().Forwarders.Socks.Address
-			o.Binary.Ok = st.Exists && st.ChmodX
-		case "tun":
-			o.Address = t.br.Config().Forwarders.Tun.Address
-			o.Binary.Ok = st.Exists && st.ChmodX && *st.Chown0 && *st.ChmodUS
-		}
-		o.Binary.State = st
+		syncBinaryState()
 		t.reply(w, o)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/start", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +127,8 @@ func (t *T) registerForwarder(name string) {
 			}
 		}()
 		binpath := t.br.Fd.Path(bin)
-		st := t.getBinaryState(bin)
+		syncBinaryState()
+		st := o.Binary.State
 		switch {
 		case !st.Exists:
 			err = fmt.Errorf("forwarder %s does not exist", bin)
@@ -226,6 +229,7 @@ func (t *T) registerForwarder(name string) {
 				status.ErrRequest.Wrap(err).WriteTo(w)
 			}
 		}()
+		syncBinaryState()
 		if err = t.br.Fd.Get(&o.Pid, pidfile); err != nil {
 			err = fmt.Errorf(
 				"could not get pid of %s from %s: %s",
