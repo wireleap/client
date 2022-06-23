@@ -11,7 +11,7 @@ import (
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
-	"github.com/wireleap/client/sub/tuncmd"
+	"github.com/wireleap/client/sub/tuncmd/tuncmd_platform"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/consume"
 	"github.com/wireleap/common/api/duration"
@@ -52,7 +52,7 @@ func PostUpgradeHook(f fsdir.T) (err error) {
 	if err = cli.RunChild(f.Path("wireleap"), "stop"); err != nil {
 		return
 	}
-	if tuncmd.Available {
+	if tuncmd_platform.Available {
 		fp := f.Path("wireleap_tun")
 		fmt.Println("===================================")
 		fmt.Println("NOTE: to enable wireleap_tun again:")
@@ -71,7 +71,7 @@ func PostRollbackHook(f fsdir.T) (err error) {
 	if err = cli.RunChild(f.Path("wireleap"), "init", "--force-unpack-only"); err != nil {
 		return
 	}
-	if tuncmd.Available {
+	if tuncmd_platform.Available {
 		fp := f.Path("wireleap_tun")
 		fmt.Println("===================================")
 		fmt.Println("NOTE: to enable wireleap_tun again:")
@@ -130,7 +130,7 @@ var MIGRATIONS = []*upgrade.Migration{
 // the directory.
 func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
 	// check if running wireleap or wireleap_tun
-	if tuncmd.Available {
+	if tuncmd_platform.Available {
 		if err = cli.RunChild(f.Path("wireleap"), "tun", "status"); err == nil {
 			err = fmt.Errorf("wireleap_tun appears to be running, please stop it to upgrade")
 			return
@@ -140,7 +140,7 @@ func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
 		err = fmt.Errorf("wireleap appears to be running, please stop it to upgrade")
 		return
 	}
-	if tuncmd.Available && !process.Writable(f.Path("wireleap_tun")) {
+	if tuncmd_platform.Available && !process.Writable(f.Path("wireleap_tun")) {
 		err = fmt.Errorf(
 			"%s is not writable by current user: %s, please remove it manually to upgrade",
 			f.Path("wireleap_tun"),
