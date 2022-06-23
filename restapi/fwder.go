@@ -21,7 +21,7 @@ import (
 
 const fwderPrefix = "wireleap_"
 
-type fwderReply struct {
+type FwderReply struct {
 	Pid     int         `json:"pid"`
 	State   string      `json:"state"`
 	Address string      `json:"address"`
@@ -70,7 +70,7 @@ func (t *T) registerForwarder(name string) {
 	var (
 		bin     = fwderPrefix + name
 		pidfile = bin + ".pid"
-		o       = fwderReply{
+		o       = FwderReply{
 			Pid:     -1,
 			State:   "inactive",
 			Address: "0.0.0.0:0",

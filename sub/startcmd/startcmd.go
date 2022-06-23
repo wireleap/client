@@ -4,7 +4,7 @@ package startcmd
 
 import (
 	"crypto/tls"
-	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -18,9 +18,11 @@ import (
 
 	"github.com/wireleap/client/broker"
 	"github.com/wireleap/client/clientcfg"
+	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/common/api/client"
+	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/process"
@@ -105,21 +107,28 @@ func Cmd(arg0 string) *cli.Subcmd {
 				if err = cmd.Start(); err != nil {
 					log.Fatalf("could not spawn background %s process: %s", arg0, err)
 				}
-				var st json.RawMessage
-				cl := client.New(nil)
-				if err = cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st); err == nil {
-					fmt.Println(string(st))
-					return
-				}
-				o := restapi.StatusReply{
+				// assuming failed by default
+				st := restapi.StatusReply{
 					Home:    fm.Path(),
 					Pid:     -1,
 					State:   "failed",
 					Broker:  restapi.StatusBroker{},
 					Upgrade: restapi.StatusUpgrade{},
 				}
-				b, _ := json.Marshal(o)
-				os.Stdout.Write(b)
+				cl := client.New(nil)
+				err = cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st)
+				if err != nil {
+					e := &status.T{}
+					if errors.As(err, &e) {
+						// error can be jsonized
+						clientlib.JSONOrDie(os.Stdout, e)
+						return
+					} else {
+						log.Printf("error while executing request: %s", err)
+					}
+				} else {
+					clientlib.JSONOrDie(os.Stdout, st)
+				}
 				return
 			}
 			if c.Broker.Address == nil {
