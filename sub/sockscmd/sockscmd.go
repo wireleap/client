@@ -3,7 +3,6 @@
 package sockscmd
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -13,7 +12,9 @@ import (
 	"text/tabwriter"
 
 	"github.com/wireleap/client/clientcfg"
+	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
+	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -54,7 +55,7 @@ func Cmd() (r *cli.Subcmd) {
 		}
 		cl := client.New(nil)
 		var (
-			st   json.RawMessage
+			st   restapi.FwderReply
 			meth = http.MethodGet
 			url  = "http://" + *c.Address + "/api/forwarders/" + name
 		)
@@ -94,11 +95,11 @@ func Cmd() (r *cli.Subcmd) {
 			if cmd == "restart" {
 				url = "http://" + *c.Address + "/api/forwarders/" + name + "/start"
 				if err = cl.Perform(meth, url, nil, &st); err == nil {
-					fmt.Println(string(st))
+					clientlib.JSONOrDie(os.Stdout, st)
 					return
 				}
 			}
-			fmt.Println(string(st))
+			clientlib.JSONOrDie(os.Stdout, st)
 			return
 		}
 		log.Fatalf("error while calling %s: %s", url, err)
