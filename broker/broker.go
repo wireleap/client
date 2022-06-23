@@ -277,16 +277,13 @@ func (t *T) ContractInfo() *contractinfo.T { return t.ci }
 
 func (t *T) reload() {
 	t.l.Println("reloading config")
-	cfg := clientcfg.Defaults()
-	err := t.Fd.Get(&cfg, filenames.Config)
-	if err != nil {
+	if err := t.Fd.Get(t.cfg, filenames.Config); err != nil {
 		t.l.Printf(
 			"could not reload config: %s, aborting reload",
 			err,
 		)
 		return
 	}
-	t.cfg = &cfg
 	// refresh contract info
 	if _, _, err := t.Sync(); err != nil {
 		t.l.Printf(
