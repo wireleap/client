@@ -49,7 +49,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				return
 			}
 			t.br.Reload()
-			status.OK.WriteTo(w)
+			t.reply(w, t.br.Config())
 		}),
 	}))
 	t.mux.Handle("/runtime", provide.MethodGate(provide.Routes{
