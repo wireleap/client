@@ -3,7 +3,6 @@
 package statuscmd
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/wireleap/client/clientcfg"
+	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/common/api/client"
@@ -70,7 +70,7 @@ func Cmd(arg0 string) *cli.Subcmd {
 					}
 
 					cl := client.New(nil)
-					var st json.RawMessage
+					var st restapi.StatusReply
 					err = cl.Perform(
 						http.MethodGet,
 						"http://"+*c.Address+"/api/status",
@@ -80,14 +80,9 @@ func Cmd(arg0 string) *cli.Subcmd {
 					if err != nil {
 						log.Fatalf("could not get process status via API: %s", err)
 					}
-					fmt.Printf(string(st))
-					var str restapi.StatusReply
-					if err = json.Unmarshal(st, &str); err != nil {
-						log.Printf("could not unmarshal status reply, assuming state=unknown")
-						os.Exit(3)
-					}
+					clientlib.JSONOrDie(os.Stdout, st)
 					var exit int
-					switch str.State {
+					switch st.State {
 					case "active":
 						exit = 0
 					case "inactive":

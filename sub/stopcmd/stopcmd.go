@@ -3,13 +3,13 @@
 package stopcmd
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
+	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -44,10 +44,9 @@ func Cmd(arg0 string) *cli.Subcmd {
 				Broker:  restapi.StatusBroker{},
 				Upgrade: restapi.StatusUpgrade{},
 			}
-			b, _ := json.Marshal(o)
 			for i := 0; i < 30; i++ {
 				if !process.Exists(pid) {
-					os.Stdout.Write(b)
+					clientlib.JSONOrDie(os.Stdout, o)
 					fm.Del(pidfile)
 					return
 				}
@@ -58,7 +57,7 @@ func Cmd(arg0 string) *cli.Subcmd {
 			if process.Exists(pid) {
 				log.Fatalf("timed out waiting for %s (pid %d) to shut down -- process still alive!", arg0, pid)
 			}
-			os.Stdout.Write(b)
+			clientlib.JSONOrDie(os.Stdout, o)
 			fm.Del(pidfile)
 		},
 	}

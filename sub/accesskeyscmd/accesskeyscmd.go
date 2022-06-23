@@ -3,16 +3,15 @@
 package accesskeyscmd
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 
 	"github.com/wireleap/client/clientcfg"
+	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/common/api/client"
@@ -51,6 +50,9 @@ func Cmd() *cli.Subcmd {
 			meth  = http.MethodGet
 			u     = "http://" + *c.Address + "/api/accesskeys"
 			param interface{}
+			ak    restapi.AccesskeyReply
+			aks   []restapi.AccesskeyReply
+			out   interface{} = aks
 		)
 		switch fs.Arg(0) {
 		case "list":
@@ -66,26 +68,22 @@ func Cmd() *cli.Subcmd {
 		case "activate":
 			u += "/activate"
 			meth = http.MethodPost
+			out = ak
 		default:
 			log.Fatalf("unknown command %s", fs.Arg(0))
 		}
-		var o json.RawMessage
-		err = cl.Perform(
-			meth,
-			u,
-			param,
-			&o,
-		)
+		err = cl.Perform(meth, u, param, &out)
 		if err != nil {
 			st := &status.T{}
 			if errors.As(err, &st) {
-				fmt.Println(st)
+				// error can be jsonized
+				clientlib.JSONOrDie(os.Stdout, st)
 				return
 			} else {
 				log.Printf("error while executing request: %s", err)
 			}
 		} else {
-			fmt.Println(string(o))
+			clientlib.JSONOrDie(os.Stdout, out)
 		}
 	}
 	r.SetMinimalUsage("COMMAND")
