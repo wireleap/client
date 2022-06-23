@@ -122,7 +122,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				return
 			}
 			t.br.Reload()
-			t.reply(w, aks)
+			t.reply(w, t.accesskeysFromPofs(aks.Pofs...))
 		}),
 	}))
 	t.mux.Handle("/accesskeys/activate", provide.MethodGate(provide.Routes{
