@@ -47,7 +47,7 @@ func (t *T) accesskeysFromPofs(pofs ...*pof.T) (rs []*AccesskeyReply) {
 		}
 		rs = append(rs, &AccesskeyReply{
 			Contract:   ci.Endpoint,
-			Duration:   int64(ci.Servicekey.Duration),
+			Duration:   int64(time.Duration(ci.Servicekey.Duration) / time.Second),
 			State:      "inactive",
 			Expiration: p.Expiration,
 		})
