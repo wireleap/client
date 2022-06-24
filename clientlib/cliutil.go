@@ -12,7 +12,7 @@ import (
 // the intended usage of this function is that it should never fail
 // if it does fail, that's an issue with the calling code
 func JSONOrDie(w io.Writer, x interface{}) {
-	b, err := json.MarshalIndent(x, "", "    ")
+	b, err := json.MarshalIndent(x, "", "  ")
 	if err != nil {
 		log.Fatalf("could not marshal JSON output for %+v: %s", w, err)
 	}
