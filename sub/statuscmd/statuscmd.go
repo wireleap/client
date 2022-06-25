@@ -15,7 +15,6 @@ import (
 	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
-	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/process"
@@ -68,19 +67,13 @@ func Cmd(arg0 string) *cli.Subcmd {
 					if err != nil {
 						log.Fatalf("could not read config: %s", err)
 					}
-
-					cl := client.New(nil)
 					var st restapi.StatusReply
-					err = cl.Perform(
+					clientlib.APICallOrDie(
 						http.MethodGet,
 						"http://"+*c.Address+"/api/status",
 						nil,
 						&st,
 					)
-					if err != nil {
-						log.Fatalf("could not get process status via API: %s", err)
-					}
-					clientlib.JSONOrDie(os.Stdout, st)
 					var exit int
 					switch st.State {
 					case "active":
