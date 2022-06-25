@@ -269,7 +269,7 @@ func (t *T) registerForwarder(name string) {
 		logfile := t.br.Fd.Path(bin + ".log")
 		b, err := ioutil.ReadFile(logfile)
 		if err != nil {
-			status.ErrRequest.WriteTo(w)
+			status.ErrNotFound.Wrap(err).WriteTo(w)
 			return
 		}
 		w.Write(b)
