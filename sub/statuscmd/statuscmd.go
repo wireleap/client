@@ -47,57 +47,52 @@ func Cmd(arg0 string) *cli.Subcmd {
 		}},
 		Run: func(fm fsdir.T) {
 			var (
-				pid    int
-				status int
-				text   string
-
-				err = fm.Get(&pid, arg0+".pid")
+				o = restapi.StatusReply{
+					Home:  fm.Path(),
+					Pid:   -1,
+					State: "unknown",
+				}
+				exit = 3
 			)
-
-			if err != nil {
+			// set both state string & exit code
+			setState := func(s string) {
+				switch s {
+				case "active":
+					exit = 0
+				case "inactive":
+					exit = 1
+				case "activating", "deactivating":
+					exit = 2
+				case "unknown":
+					exit = 3
+				default:
+					panic(fmt.Errorf("unknown state: %s", s))
+				}
+				o.State = s
+			}
+			if err := fm.Get(&o.Pid, arg0+".pid"); err != nil {
 				if errors.Is(err, os.ErrNotExist) {
-					text, status = arg0+" is not running", 1
+					setState("inactive")
 				} else {
-					text, status = fmt.Sprintf("could not read %s status", arg0), 2
+					setState("unknown")
 				}
 			} else {
-				if process.Exists(pid) {
+				if process.Exists(o.Pid) {
 					c := clientcfg.Defaults()
 					err := fm.Get(&c, filenames.Config)
 					if err != nil {
 						log.Fatalf("could not read config: %s", err)
 					}
-					var st restapi.StatusReply
-					clientlib.APICallOrDie(
-						http.MethodGet,
-						"http://"+*c.Address+"/api/status",
-						nil,
-						&st,
-					)
-					var exit int
-					switch st.State {
-					case "active":
-						exit = 0
-					case "inactive":
-						exit = 1
-					case "activating", "deactivating":
-						exit = 2
-					default:
-						exit = 3
-					}
-					os.Exit(exit)
+					clientlib.APICallOrDie(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &o)
+					setState(o.State)
+					return
 				} else {
 					// pidfile was not cleaned up ...
-					text, status = fmt.Sprintf(
-						"%s is not running (might have crashed, see %s)",
-						arg0,
-						arg0+".log",
-					), 1
+					setState("failed")
 				}
 			}
-
-			fmt.Println(text)
-			os.Exit(status)
+			clientlib.JSONOrDie(os.Stdout, o)
+			os.Exit(exit)
 		},
 	}
 	r.Writer = tabwriter.NewWriter(r.FlagSet.Output(), 0, 8, 5, ' ', 0)
