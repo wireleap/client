@@ -120,6 +120,7 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 			)
 		}
 	}
+	t.cl.RetryOpt.Interval = 1 * time.Second
 	return t
 }
 
