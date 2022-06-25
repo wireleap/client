@@ -3,7 +3,6 @@
 package accesskeyscmd
 
 import (
-	"errors"
 	"flag"
 	"log"
 	"net/http"
@@ -14,8 +13,6 @@ import (
 	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
-	"github.com/wireleap/common/api/client"
-	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/api/texturl"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -45,7 +42,6 @@ func Cmd() *cli.Subcmd {
 		if err != nil {
 			log.Fatal(err)
 		}
-		cl := client.New(nil)
 		var (
 			meth  = http.MethodGet
 			u     = "http://" + *c.Address + "/api/accesskeys"
@@ -72,19 +68,7 @@ func Cmd() *cli.Subcmd {
 		default:
 			log.Fatalf("unknown command %s", fs.Arg(0))
 		}
-		err = cl.Perform(meth, u, param, &out)
-		if err != nil {
-			st := &status.T{}
-			if errors.As(err, &st) {
-				// error can be jsonized
-				clientlib.JSONOrDie(os.Stdout, st)
-				return
-			} else {
-				log.Printf("error while executing request: %s", err)
-			}
-		} else {
-			clientlib.JSONOrDie(os.Stdout, out)
-		}
+		clientlib.APICallOrDie(meth, u, param, &out)
 	}
 	r.SetMinimalUsage("COMMAND")
 	return r
