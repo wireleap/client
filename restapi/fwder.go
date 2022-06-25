@@ -240,7 +240,6 @@ func (t *T) registerForwarder(name string) {
 			return
 		}
 		if process.Exists(o.Pid) {
-			log.Println(o.Pid, "exists")
 			if err = process.Term(o.Pid); err != nil {
 				err = fmt.Errorf("could not terminate %s pid %d: %s", bin, o.Pid, err)
 				return
