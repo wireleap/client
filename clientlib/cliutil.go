@@ -8,10 +8,19 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/api/status"
 )
+
+var DefaultAPIClient = func() *client.Client {
+	cl := client.New(nil)
+	cl.RetryOpt.Tries = 20
+	cl.RetryOpt.Interval = 100 * time.Millisecond
+	cl.RetryOpt.Verbose = false
+	return cl
+}()
 
 // NOTE:
 // the intended usage of this function is that it should never fail
@@ -26,8 +35,7 @@ func JSONOrDie(w io.Writer, x interface{}) {
 }
 
 func APICallOrDie(method, url string, in interface{}, out interface{}) {
-	cl := client.New(nil)
-	if err := cl.Perform(method, url, in, out); err != nil {
+	if err := DefaultAPIClient.Perform(method, url, in, out); err != nil {
 		st := &status.T{}
 		if errors.As(err, &st) {
 			// error can be jsonized
