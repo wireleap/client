@@ -103,16 +103,18 @@ func (t *T) registerForwarder(name string) {
 		defer mu.Unlock()
 		t.br.Fd.Get(&o.Pid, pidfile)
 		var fst FwderState
-		for i := 0; i < 10; i++ {
-			if err := cl.PerformOnce(http.MethodGet, "http://localhost/state", nil, &fst); err == nil && fst.State != "unknown" {
-				o.State = fst.State
-				break
-			} else if o.Pid != -1 && !process.Exists(o.Pid) && o.State != "failed" {
-				o.State = "inactive"
-			} else {
-				o.State = "unknown"
+		if o.Pid == -1 {
+			o.State = "inactive"
+		} else if o.Pid != -1 && !process.Exists(o.Pid) {
+			o.State = "failed"
+		} else {
+			for i := 0; i < 10; i++ {
+				if err := cl.PerformOnce(http.MethodGet, "http://localhost/state", nil, &fst); err == nil {
+					o.State = fst.State
+					break
+				}
+				time.Sleep(100 * time.Millisecond)
 			}
-			time.Sleep(100 * time.Millisecond)
 		}
 		syncBinaryState()
 		t.reply(w, o)
