@@ -48,7 +48,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrInternal.WriteTo(w)
 				return
 			}
-			t.br.Reload()
+			go t.br.Reload()
 			t.reply(w, t.br.Config())
 		}),
 	}))
@@ -121,7 +121,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				status.ErrRequest.Wrap(err).WriteTo(w)
 				return
 			}
-			t.br.Reload()
+			go t.br.Reload()
 			t.reply(w, t.accesskeysFromPofs(aks.Pofs...))
 		}),
 	}))
