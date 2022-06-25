@@ -31,7 +31,7 @@ func (t *T) accesskeysFromSks(sks ...*servicekey.T) (rs []*AccesskeyReply) {
 		}
 		rs = append(rs, &AccesskeyReply{
 			Contract:   ci.Endpoint,
-			Duration:   int64(ci.Servicekey.Duration),
+			Duration:   int64(time.Duration(ci.Servicekey.Duration) / time.Second),
 			State:      state,
 			Expiration: sk.Contract.SettlementOpen,
 		})
