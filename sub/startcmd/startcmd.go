@@ -113,6 +113,7 @@ func Cmd(arg0 string) *cli.Subcmd {
 					Upgrade: restapi.StatusUpgrade{},
 				}
 				clientlib.APICallOrDie(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st)
+				return
 			}
 			if c.Broker.Address == nil {
 				log.Fatalf("broker.address not provided, refusing to start")
