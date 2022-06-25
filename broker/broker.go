@@ -81,6 +81,14 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 			t.l.Fatalf("could not get previous pofs to initialize accesskeys: %s", err)
 		}
 	}
+	if err = t.Fd.Get(&t.sk, filenames.Servicekey); err != nil {
+		if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrNotExist) {
+			t.l.Fatalf(
+				"could not get apparently existing %s to initialize accesskeys: %s",
+				filenames.Servicekey, err,
+			)
+		}
+	}
 	if cfg.Broker.Address == nil {
 		t.l.Fatal("broker.address is nil in config, please set it")
 	}
