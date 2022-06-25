@@ -91,18 +91,11 @@ func Cmd() (r *cli.Subcmd) {
 		default:
 			log.Fatalf("unknown %s subcommand: %s", name, cmd)
 		}
-		if err = cl.Perform(meth, url, nil, &st); err == nil {
-			if cmd == "restart" {
-				url = "http://" + *c.Address + "/api/forwarders/" + name + "/start"
-				if err = cl.Perform(meth, url, nil, &st); err == nil {
-					clientlib.JSONOrDie(os.Stdout, st)
-					return
-				}
-			}
-			clientlib.JSONOrDie(os.Stdout, st)
-			return
+		clientlib.APICallOrDie(meth, url, nil, &st)
+		if cmd == "restart" {
+			url = "http://" + *c.Address + "/api/forwarders/" + name + "/start"
+			clientlib.APICallOrDie(meth, url, nil, &st)
 		}
-		log.Fatalf("error while calling %s: %s", url, err)
 	}
 	return
 }
