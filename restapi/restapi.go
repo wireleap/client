@@ -4,6 +4,7 @@ package restapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -57,7 +58,11 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 	}))
 	t.mux.Handle("/contract", provide.MethodGate(provide.Routes{
 		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			t.reply(w, t.br.ContractInfo())
+			if ci := t.br.ContractInfo(); ci != nil {
+				t.reply(w, t.br.ContractInfo())
+			} else {
+				status.ErrNotFound.Wrap(fmt.Errorf("contract info is not initialized")).WriteTo(w)
+			}
 		}),
 	}))
 	t.mux.Handle("/relays", provide.MethodGate(provide.Routes{
@@ -65,7 +70,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			rs, err := t.br.Relays()
 			if err != nil {
 				t.l.Printf("error %s while serving relays", err)
-				status.ErrInternal.WriteTo(w)
+				status.ErrNotFound.Wrap(err).WriteTo(w)
 				return
 			}
 			type selectableRelay struct {
