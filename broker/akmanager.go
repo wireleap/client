@@ -212,8 +212,9 @@ func (t *T) RefreshSK() (err error) {
 	}
 	newps := []*pof.T{}
 	// filter pofs & get sk
+	now := time.Now().Unix()
 	for _, p := range t.pofs {
-		if t.sk == nil {
+		if t.sk == nil || t.sk.IsExpiredAt(now) {
 			t.l.Printf(
 				"generating new servicekey from pof %s...",
 				p.Digest(),
