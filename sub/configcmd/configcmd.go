@@ -8,14 +8,15 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"text/tabwriter"
 
 	"github.com/wireleap/client/clientcfg"
+	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
-	"github.com/wireleap/common/cli/process"
 )
 
 func Cmd(fm0 fsdir.T) *cli.Subcmd {
@@ -96,64 +97,39 @@ func Cmd(fm0 fsdir.T) *cli.Subcmd {
 
 func Run(fm fsdir.T, key, val string) {
 	c := clientcfg.Defaults()
-	err := fm.Get(&c, filenames.Config)
-
-	if err != nil {
+	if err := fm.Get(&c, filenames.Config); err != nil {
 		log.Fatalf("error when loading config: %s", err)
 	}
-
+	var match *clientcfg.Meta
 	for _, meta := range c.Metadata() {
 		if meta.Name == key {
-			if len(val) == 0 {
-				b, err := json.Marshal(meta.Val)
-
-				if err != nil {
-					b = []byte("unknown")
-				} else if meta.Quote && !bytes.Equal(b, []byte{'n', 'u', 'l', 'l'}) {
-					b = b[1 : len(b)-1]
-				}
-
-				fmt.Println(string(b))
-				return
-			}
-
-			if meta.Quote {
-				val = "\"" + val + "\""
-			}
-
-			err = json.Unmarshal([]byte(val), meta.Val)
-
-			if err != nil {
-				log.Fatalf(
-					"could not set %s value to %s: %s",
-					key,
-					val,
-					err,
-				)
-			}
-
-			err = fm.Set(&c, filenames.Config)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			var pid int
-			err = fm.Get(&pid, filenames.Pid)
-
-			if err != nil {
-				return
-			}
-
-			process.Reload(pid)
-
-			if key == "address.socks" {
-				log.Printf("Note: address.socks changes will take effect on restart.")
-			}
-
-			return
+			match = meta
+			break
 		}
 	}
-
-	log.Fatalf("no such config key: %s", key)
+	if match == nil {
+		log.Fatalf("no such config key: %s", key)
+	}
+	if len(val) == 0 {
+		// show defined value
+		b, err := json.Marshal(match.Val)
+		if err != nil {
+			// this shouldn't really happen
+			b = []byte("unknown")
+		} else if match.Quote && !bytes.Equal(b, []byte("null")) {
+			b = b[1 : len(b)-1]
+		}
+		fmt.Println(string(b))
+		return
+	}
+	if match.Quote {
+		val = "\"" + val + "\""
+	}
+	if err := json.Unmarshal([]byte(val), match.Val); err != nil {
+		log.Fatalf("could not set %s value to %s: %s", key, val, err)
+	}
+	if key == "address.socks" {
+		log.Printf("Note: address.socks changes will take effect on restart.")
+	}
+	clientlib.APICallOrDie(http.MethodPost, "http://"+*c.Address+"/api/config", &c, &c)
 }
