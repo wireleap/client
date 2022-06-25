@@ -185,7 +185,10 @@ func (t *T) GetSK(fetch bool) (*servicekey.T, error) {
 		return nil, fmt.Errorf("no activated servicekey available")
 	}
 	// discard old servicekey & get a new one
-	return t.RefreshSK()
+	if err := t.RefreshSK(); err != nil {
+		return nil, fmt.Errorf("could not refresh servicekey: %s", err)
+	}
+	return t.sk, nil
 }
 
 func (t *T) NewSKFromPof(skurl string, p *pof.T) (*servicekey.T, error) {
@@ -201,31 +204,24 @@ func (t *T) NewSKFromPof(skurl string, p *pof.T) (*servicekey.T, error) {
 	return sk, nil
 }
 
-func (t *T) RefreshSK() (sk *servicekey.T, err error) {
-	ps := []*pof.T{}
-	if err = t.Fd.Get(&ps, filenames.Pofs); err != nil {
-		return nil, fmt.Errorf(
-			"could not open %s: %s; did you run `wireleap import`?",
-			filenames.Pofs,
-			err,
-		)
-	}
-	ps = t.PickPofs()
-	if len(ps) == 0 {
-		return nil, fmt.Errorf("no fresh pofs available")
+// It is best to lock mutex at the calling site while using this function.
+func (t *T) RefreshSK() (err error) {
+	t.PrunePofs()
+	if len(t.pofs) == 0 {
+		return fmt.Errorf("no fresh pofs available")
 	}
 	newps := []*pof.T{}
 	// filter pofs & get sk
-	for _, p := range ps {
-		if sk == nil {
+	for _, p := range t.pofs {
+		if t.sk == nil {
 			t.l.Printf(
 				"generating new servicekey from pof %s...",
 				p.Digest(),
 			)
 			if clientlib.ContractURL(t.Fd) == nil {
-				return nil, fmt.Errorf("no contract defined")
+				return fmt.Errorf("no contract defined")
 			}
-			sk, err = t.NewSKFromPof(
+			t.sk, err = t.NewSKFromPof(
 				clientlib.ContractURL(t.Fd).String()+"/servicekey/activate",
 				p,
 			)
@@ -249,36 +245,38 @@ func (t *T) RefreshSK() (sk *servicekey.T, err error) {
 		// keep the rest untouched
 		newps = append(newps, p)
 	}
+	t.pofs = newps
 	// write new pofs
-	if err = t.Fd.Set(&newps, filenames.Pofs); err != nil {
-		return nil, fmt.Errorf(
+	if err = t.Fd.Set(&t.pofs, filenames.Pofs); err != nil {
+		return fmt.Errorf(
 			"could not write new %s: %s",
 			filenames.Pofs,
 			err,
 		)
 	}
-	if sk == nil {
-		return nil, fmt.Errorf("no servicekey available")
+	if t.sk == nil {
+		return fmt.Errorf("no servicekey available")
 	}
 	// write new servicekey
-	if err = t.Fd.Set(&sk, filenames.Servicekey); err != nil {
-		return nil, fmt.Errorf(
+	if err = t.Fd.Set(&t.sk, filenames.Servicekey); err != nil {
+		return fmt.Errorf(
 			"could not write new %s: %s",
 			filenames.Servicekey,
 			err,
 		)
 	}
-	return sk, nil
+	return nil
 }
 
-func (t *T) PickPofs() (r []*pof.T) {
+func (t *T) PrunePofs() {
+	r := []*pof.T{}
 	for _, p := range t.pofs {
 		if !p.IsExpiredAt(time.Now().Unix()) {
 			// this one has not expired yet
 			r = append(r, p)
 		}
 	}
-	return r
+	t.pofs = r
 }
 
 func (t *T) Activate() (err error) {
@@ -310,7 +308,7 @@ func (t *T) Activate() (err error) {
 		)
 	}
 	// discard old servicekey & get a new one
-	if t.sk, err = t.RefreshSK(); err != nil {
+	if err = t.RefreshSK(); err != nil {
 		return fmt.Errorf("error while activating servicekey with pof: %s", err)
 	}
 	if err = t.Fd.Set(t.sk, filenames.Servicekey); err != nil {
