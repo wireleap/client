@@ -4,7 +4,6 @@ package startcmd
 
 import (
 	"crypto/tls"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -21,8 +20,6 @@ import (
 	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
-	"github.com/wireleap/common/api/client"
-	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/process"
@@ -115,21 +112,7 @@ func Cmd(arg0 string) *cli.Subcmd {
 					Broker:  restapi.StatusBroker{},
 					Upgrade: restapi.StatusUpgrade{},
 				}
-				cl := client.New(nil)
-				err = cl.Perform(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st)
-				if err != nil {
-					e := &status.T{}
-					if errors.As(err, &e) {
-						// error can be jsonized
-						clientlib.JSONOrDie(os.Stdout, e)
-						return
-					} else {
-						log.Printf("error while executing request: %s", err)
-					}
-				} else {
-					clientlib.JSONOrDie(os.Stdout, st)
-				}
-				return
+				clientlib.APICallOrDie(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st)
 			}
 			if c.Broker.Address == nil {
 				log.Fatalf("broker.address not provided, refusing to start")
