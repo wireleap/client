@@ -115,6 +115,9 @@ func (t *T) Import(u url.URL) (ak *accesskey.T, err error) {
 		)
 	}
 
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.ci = ci
 	if err = clientlib.SaveContractInfo(t.Fd, ci, d); err != nil {
 		return nil, fmt.Errorf(
 			"could not save contract info for %s: %s",
