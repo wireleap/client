@@ -9,7 +9,6 @@ import (
 
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/filenames"
-	"github.com/wireleap/client/sub/configcmd"
 	"github.com/wireleap/client/sub/initcmd/embedded"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
@@ -28,11 +27,6 @@ func Cmd() *cli.Subcmd {
 			if !*force {
 				if err := fm.Set(clientcfg.Defaults(), filenames.Config); err != nil {
 					log.Fatalf("could not write initial config.json: %s", err)
-				}
-				for k, v := range map[string]string{
-					"broker.accesskey.use_on_demand": "true",
-				} {
-					configcmd.Run(fm, k, v)
 				}
 			}
 		},
