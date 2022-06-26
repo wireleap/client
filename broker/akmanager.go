@@ -209,22 +209,25 @@ func (t *T) NewSKFromPof(skurl string, p *pof.T) (*servicekey.T, error) {
 
 // It is best to lock mutex at the calling site while using this function.
 func (t *T) RefreshSK() (err error) {
-	t.PrunePofs()
 	if len(t.pofs) == 0 {
 		return fmt.Errorf("no fresh pofs available")
+	}
+	if clientlib.ContractURL(t.Fd) == nil {
+		return fmt.Errorf("no contract defined")
 	}
 	newps := []*pof.T{}
 	// filter pofs & get sk
 	now := time.Now().Unix()
 	for _, p := range t.pofs {
+		if p.IsExpiredAt(now) {
+			// leave the expired pof out
+			continue
+		}
 		if t.sk == nil || t.sk.IsExpiredAt(now) {
 			t.l.Printf(
 				"generating new servicekey from pof %s...",
 				p.Digest(),
 			)
-			if clientlib.ContractURL(t.Fd) == nil {
-				return fmt.Errorf("no contract defined")
-			}
 			t.sk, err = t.NewSKFromPof(
 				clientlib.ContractURL(t.Fd).String()+"/servicekey/activate",
 				p,
@@ -249,6 +252,7 @@ func (t *T) RefreshSK() (err error) {
 		// keep the rest untouched
 		newps = append(newps, p)
 	}
+	// now left with: faulty and untouched pofs
 	t.pofs = newps
 	// write new pofs
 	if err = t.Fd.Set(&t.pofs, filenames.Pofs); err != nil {
@@ -258,7 +262,8 @@ func (t *T) RefreshSK() (err error) {
 			err,
 		)
 	}
-	if t.sk == nil {
+	// still no fresh sk present? (iterated over all pofs without result)
+	if t.sk == nil || t.sk.IsExpiredAt(now) {
 		return fmt.Errorf("no servicekey available")
 	}
 	// write new servicekey
@@ -270,17 +275,6 @@ func (t *T) RefreshSK() (err error) {
 		)
 	}
 	return nil
-}
-
-func (t *T) PrunePofs() {
-	r := []*pof.T{}
-	for _, p := range t.pofs {
-		if !p.IsExpiredAt(time.Now().Unix()) {
-			// this one has not expired yet
-			r = append(r, p)
-		}
-	}
-	t.pofs = r
 }
 
 func (t *T) Activate() (err error) {
