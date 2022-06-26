@@ -41,7 +41,7 @@ type Circuit struct {
 	// Timeout is the dial timeout for relay connections.
 	Timeout duration.T `json:"timeout,omitempty"`
 	// Whitelist is the optional user-defined list of relays to use exclusively.
-	Whitelist *[]string `json:"whitelist"`
+	Whitelist []string `json:"whitelist"`
 	// Hops is the desired number of hops to use for the circuit.
 	Hops int `json:"hops,omitempty"`
 }
@@ -73,8 +73,9 @@ func Defaults() C {
 			Address:   &brokaddr,
 			Accesskey: Accesskey{UseOnDemand: true},
 			Circuit: Circuit{
-				Timeout: duration.T(time.Second * 5),
-				Hops:    1,
+				Timeout:   duration.T(time.Second * 5),
+				Whitelist: []string{},
+				Hops:      1,
 			},
 		},
 		Forwarders: Forwarders{

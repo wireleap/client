@@ -57,13 +57,11 @@ func Cmd(fm0 fsdir.T) *cli.Subcmd {
 
 		if val_type == "list" && len(vals) > 0 {
 			if vals[0] == "null" {
-				val = vals[0]
+				val = "[]"
 			} else {
 				val_bytes, err := json.Marshal(&vals)
 				if err != nil {
-					log.Fatalf(
-						"could not marshal values for `circuit.whitelist`: %s",
-						err)
+					log.Fatalf("could not marshal values for list: %s", err)
 				}
 				val = string(val_bytes)
 			}
