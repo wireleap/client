@@ -92,9 +92,15 @@ func Cmd() (r *cli.Subcmd) {
 			log.Fatalf("unknown %s subcommand: %s", name, cmd)
 		}
 		clientlib.APICallOrDie(meth, url, nil, &st)
-		if cmd == "restart" {
+		switch cmd {
+		case "restart":
 			url = "http://" + *c.Address + "/api/forwarders/" + name + "/start"
 			clientlib.APICallOrDie(meth, url, nil, &st)
+		case "status":
+			switch st.State {
+			case "failed", "inactive", "unknown":
+				os.Exit(1)
+			}
 		}
 	}
 	return
