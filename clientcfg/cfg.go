@@ -70,7 +70,8 @@ func Defaults() C {
 	return C{
 		Address: &restaddr,
 		Broker: Broker{
-			Address: &brokaddr,
+			Address:   &brokaddr,
+			Accesskey: Accesskey{UseOnDemand: true},
 			Circuit: Circuit{
 				Timeout: duration.T(time.Second * 5),
 				Hops:    1,
