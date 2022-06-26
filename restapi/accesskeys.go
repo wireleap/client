@@ -45,10 +45,14 @@ func (t *T) accesskeysFromPofs(pofs ...*pof.T) (rs []*AccesskeyReply) {
 		if p == nil {
 			continue
 		}
+		state := "inactive"
+		if p.IsExpiredAt(time.Now().Unix()) {
+			state = "expired"
+		}
 		rs = append(rs, &AccesskeyReply{
 			Contract:   ci.Endpoint,
 			Duration:   int64(time.Duration(ci.Servicekey.Duration) / time.Second),
-			State:      "inactive",
+			State:      state,
 			Expiration: p.Expiration,
 		})
 	}
