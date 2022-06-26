@@ -63,7 +63,7 @@ func Cmd(arg0 string) *cli.Subcmd {
 					exit = 1
 				case "activating", "deactivating":
 					exit = 2
-				case "unknown":
+				case "failed", "unknown":
 					exit = 3
 				default:
 					panic(fmt.Errorf("unknown state: %s", s))
