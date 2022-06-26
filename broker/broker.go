@@ -143,12 +143,10 @@ func (t *T) Circuit() (r []*relayentry.T, err error) {
 		return nil, err
 	}
 	var all circuit.T
-	if t.cfg.Broker.Circuit.Whitelist != nil {
-		if len(t.cfg.Broker.Circuit.Whitelist) > 0 {
-			for _, addr := range t.cfg.Broker.Circuit.Whitelist {
-				if rl[addr] != nil {
-					all = append(all, rl[addr])
-				}
+	if t.cfg.Broker.Circuit.Whitelist != nil && len(t.cfg.Broker.Circuit.Whitelist) > 0 {
+		for _, addr := range t.cfg.Broker.Circuit.Whitelist {
+			if rl[addr] != nil {
+				all = append(all, rl[addr])
 			}
 		}
 	} else {
