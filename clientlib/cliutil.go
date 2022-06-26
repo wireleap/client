@@ -40,9 +40,8 @@ func APICallOrDie(method, url string, in interface{}, out interface{}) {
 		if errors.As(err, &st) {
 			// error can be jsonized
 			JSONOrDie(os.Stdout, st)
-			return
 		} else {
-			log.Printf("error while executing API request: %s", err)
+			log.Fatalf("error while executing API request: %s", err)
 		}
 	} else {
 		JSONOrDie(os.Stdout, out)
