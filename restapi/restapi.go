@@ -81,9 +81,9 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			// selectable by default
 			sel := true
 			wl := t.br.Config().Broker.Circuit.Whitelist
-			if wl != nil && len(*wl) > 0 {
-				// non-selectable by default if whitelist is set
-				for _, r := range rs {
+			for _, r := range rs {
+				if wl != nil && len(*wl) > 0 {
+					// non-selectable by default if whitelist is set
 					sel = false
 					for _, wlr := range *wl {
 						if wlr == r.Addr.String() {
@@ -92,13 +92,13 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 							break
 						}
 					}
-					ors = append(ors, selectableRelay{
-						T:          r,
-						Selectable: sel,
-					})
 				}
+				ors = append(ors, selectableRelay{
+					T:          r,
+					Selectable: sel,
+				})
 			}
-			t.reply(w, rs)
+			t.reply(w, ors)
 		}),
 	}))
 	t.mux.Handle("/accesskeys", provide.MethodGate(provide.Routes{
