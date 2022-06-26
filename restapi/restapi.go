@@ -82,10 +82,10 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			sel := true
 			wl := t.br.Config().Broker.Circuit.Whitelist
 			for _, r := range rs {
-				if wl != nil && len(*wl) > 0 {
+				if wl != nil && len(wl) > 0 {
 					// non-selectable by default if whitelist is set
 					sel = false
-					for _, wlr := range *wl {
+					for _, wlr := range wl {
 						if wlr == r.Addr.String() {
 							// found in whitelist = selectable
 							sel = true
