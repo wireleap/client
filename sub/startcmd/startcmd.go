@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"text/tabwriter"
+	"time"
 
 	"github.com/wireleap/client/broker"
 	"github.com/wireleap/client/clientcfg"
@@ -44,7 +45,14 @@ func shutdown() bool {
 }
 
 func setupServer(l net.Listener, h http.Handler, tc *tls.Config) {
-	h1s := &http.Server{Handler: h, TLSConfig: tc}
+	h1s := &http.Server{
+		Handler:           h,
+		TLSConfig:         tc,
+		ReadTimeout:       1 * time.Second,
+		WriteTimeout:      1 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+	}
 	h2s := &http2.Server{MaxHandlers: 0, MaxConcurrentStreams: 0}
 	if err := http2.ConfigureServer(h1s, h2s); err != nil {
 		log.Fatalf("could not configure h2 server: %s", err)
