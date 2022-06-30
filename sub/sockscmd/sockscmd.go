@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"text/tabwriter"
+	"time"
 
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/clientlib"
@@ -18,6 +19,7 @@ import (
 	"github.com/wireleap/common/api/client"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
+	"github.com/wireleap/common/cli/process"
 )
 
 const Available = true
@@ -43,6 +45,7 @@ func Cmd() (r *cli.Subcmd) {
 	}
 	r.Writer = tabwriter.NewWriter(r.FlagSet.Output(), 0, 8, 7, ' ', 0)
 	r.SetMinimalUsage("COMMAND [OPTIONS]")
+	force := r.FlagSet.Bool("force", false, "Force shutdown (when using `stop`)")
 	r.Run = func(fm fsdir.T) {
 		if r.FlagSet.NArg() < 1 {
 			r.Usage()
@@ -66,6 +69,18 @@ func Cmd() (r *cli.Subcmd) {
 			meth = http.MethodPost
 			url += "/start"
 		case "stop":
+			if args := r.FlagSet.Args(); *force || args[len(args)-1] == "--force" {
+				pidfile := bin + ".pid"
+				var pid int
+				if err := fm.Get(&pid, pidfile); err != nil {
+					log.Fatalf("could not read %s pidfile %s: %s", bin, pidfile, err)
+				}
+				process.Term(pid)
+				time.Sleep(500 * time.Millisecond)
+				process.Kill(pid)
+				log.Printf("successfully killed %s, pid %d", bin, pid)
+				return
+			}
 			meth = http.MethodPost
 			url += "/stop"
 		case "restart":
