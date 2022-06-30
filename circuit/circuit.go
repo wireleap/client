@@ -61,7 +61,7 @@ func Make(hops int, all T) (t T, err error) {
 	case hops > have:
 		// not enough relays
 		err = fmt.Errorf(
-			"not enough relays to construct circuit: need %d hops, have %d relays available",
+			"not enough relays to construct circuit: need %d hops, have %d suitable relays",
 			hops,
 			have,
 		)
