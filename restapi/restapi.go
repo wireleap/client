@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/wireleap/client/broker"
 	"github.com/wireleap/client/filenames"
@@ -20,6 +21,8 @@ import (
 
 // api server stub
 type T struct {
+	http.Handler
+
 	br  *broker.T
 	l   *log.Logger
 	mux *http.ServeMux
@@ -184,11 +187,8 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 	}))
 	t.registerForwarder("socks")
 	t.registerForwarder("tun")
+	t.Handler = http.TimeoutHandler(t.mux, 10*time.Second, "API call timed out!")
 	return
-}
-
-func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	t.mux.ServeHTTP(w, r)
 }
 
 func (t *T) reply(w http.ResponseWriter, x interface{}) {
