@@ -104,6 +104,13 @@ func Cmd() (r *cli.Subcmd) {
 		default:
 			log.Fatalf("unknown %s subcommand: %s", name, cmd)
 		}
+		time.AfterFunc(3*time.Second, func() {
+			// if 3 seconds elapsed waiting for API call to finish
+			// it is probable that the API is down
+			if cmd == "stop" {
+				log.Println("this is taking a long time, consider using `stop --force`")
+			}
+		})
 		clientlib.APICallOrDie(meth, url, nil, &st)
 		switch cmd {
 		case "restart":
