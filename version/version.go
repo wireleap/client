@@ -5,7 +5,9 @@ package version
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os/exec"
 
 	"github.com/blang/semver"
 	"github.com/wireleap/client/clientcfg"
@@ -125,26 +127,32 @@ var MIGRATIONS = []*upgrade.Migration{
 	},
 }
 
+func runSilent(args ...string) (err error) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	return cmd.Run()
+}
+
 // LatestChannelVersion is a special function for wireleap which will obtain
 // the latest version supported by the currently configured update channel from
 // the directory.
 func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
 	// check if running wireleap or wireleap_tun
 	if tuncmd_platform.Available {
-		if err = cli.RunChild(f.Path("wireleap"), "tun", "status"); err == nil {
+		if err = runSilent(f.Path("wireleap"), "tun", "status"); err == nil {
 			err = fmt.Errorf("wireleap_tun appears to be running, please stop it to upgrade")
 			return
 		}
 	}
-	if err = cli.RunChild(f.Path("wireleap"), "status"); err == nil {
+	if err = runSilent(f.Path("wireleap"), "status"); err == nil {
 		err = fmt.Errorf("wireleap appears to be running, please stop it to upgrade")
 		return
 	}
 	if tuncmd_platform.Available && !process.Writable(f.Path("wireleap_tun")) {
 		err = fmt.Errorf(
 			"%s is not writable by current user: %s, please remove it manually to upgrade",
-			f.Path("wireleap_tun"),
-			err,
+			f.Path("wireleap_tun"), err,
 		)
 		return
 	}
