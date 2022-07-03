@@ -14,6 +14,7 @@ import (
 
 	"github.com/wireleap/client/broker"
 	"github.com/wireleap/client/filenames"
+	"github.com/wireleap/common/api/interfaces/clientrelay"
 	"github.com/wireleap/common/api/provide"
 	"github.com/wireleap/common/api/relayentry"
 	"github.com/wireleap/common/api/status"
@@ -84,8 +85,23 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			// selectable by default
 			sel := true
 			wl := t.br.Config().Broker.Circuit.Whitelist
+			hops := t.br.Config().Broker.Circuit.Hops
 			for _, r := range rs {
-				if wl != nil && len(wl) > 0 {
+				switch {
+				case r.Versions.ClientRelay == nil:
+					// weird case which should not happen
+					fallthrough
+				case r.Versions.ClientRelay.Minor != clientrelay.T.Version.Minor:
+					// if version does not match it is not selectable
+					// TODO factor out this comparison?
+					fallthrough
+				case hops == 1 && r.Role != "backing":
+					// for hops=1 only backing is selectable
+					fallthrough
+				case hops == 2 && r.Role == "entropic":
+					// for hops=2 only non-entropic is selectable
+					sel = false
+				case wl != nil && len(wl) > 0:
 					// non-selectable by default if whitelist is set
 					sel = false
 					for _, wlr := range wl {
@@ -95,6 +111,8 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 							break
 						}
 					}
+				default:
+					// out of causes for unselectability
 				}
 				ors = append(ors, selectableRelay{
 					T:          r,
