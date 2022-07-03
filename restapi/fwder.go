@@ -174,12 +174,27 @@ func (t *T) registerForwarder(name string) {
 			Stderr: logfile,
 		}
 		if err = cmd.Start(); err != nil {
+			cmd.Wait()
 			mu.Lock()
 			o.State = "failed"
 			mu.Unlock()
 			err = fmt.Errorf("could not spawn background %s process: %s", bin, err)
 			return
 		}
+		go func() {
+			// reap process so it doesn't turn zombie
+			if err = cmd.Wait(); err != nil {
+				mu.Lock()
+				o.Pid = -1
+				o.State = "failed"
+				mu.Unlock()
+			} else {
+				mu.Lock()
+				o.Pid = -1
+				o.State = "inactive"
+				mu.Unlock()
+			}
+		}()
 		log.Printf(
 			"starting %s with pid %d, writing to %s...",
 			bin, cmd.Process.Pid, logpath,
@@ -203,20 +218,6 @@ func (t *T) registerForwarder(name string) {
 			}
 			time.Sleep(100 * time.Millisecond)
 		}
-		go func() {
-			// reap process so it doesn't turn zombie
-			if err = cmd.Wait(); err != nil {
-				mu.Lock()
-				o.Pid = -1
-				o.State = "failed"
-				mu.Unlock()
-			} else {
-				mu.Lock()
-				o.Pid = -1
-				o.State = "inactive"
-				mu.Unlock()
-			}
-		}()
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/stop", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
