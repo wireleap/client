@@ -197,7 +197,11 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			logfile := t.br.Fd.Path(filenames.Log)
 			b, err := ioutil.ReadFile(logfile)
 			if err != nil {
-				status.ErrRequest.WriteTo(w)
+				if errors.Is(err, fs.ErrNotExist) {
+					status.NoContent.Wrap(err).WriteTo(w)
+				} else {
+					status.ErrInternal.Wrap(err).WriteTo(w)
+				}
 				return
 			}
 			w.Write(b)
