@@ -270,7 +270,11 @@ func (t *T) registerForwarder(name string) {
 		logfile := t.br.Fd.Path(bin + ".log")
 		b, err := ioutil.ReadFile(logfile)
 		if err != nil {
-			status.ErrNotFound.Wrap(err).WriteTo(w)
+			if errors.Is(err, fs.ErrNotExist) {
+				status.NoContent.Wrap(err).WriteTo(w)
+			} else {
+				status.ErrInternal.Wrap(err).WriteTo(w)
+			}
 			return
 		}
 		w.Write(b)
