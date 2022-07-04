@@ -2,7 +2,9 @@ package restapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net"
