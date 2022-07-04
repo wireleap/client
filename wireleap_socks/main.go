@@ -160,28 +160,28 @@ func ProxyUDP(l net.PacketConn, dialer DialFunc) {
 	}
 }
 
-const StateSock = "wireleap_socks.sock"
-
 func main() {
 	// set up state API
 	state := "activating"
-	go func() {
-		err := restapi.UnixServer(StateSock, provide.Routes{"/state": provide.MethodGate(provide.Routes{
-			http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				st := restapi.FwderState{State: state}
-				b, err := json.Marshal(st)
-				if err != nil {
-					log.Printf("error while serving /state reply: %s", err)
-					status.ErrInternal.WriteTo(w)
-					return
-				}
-				w.Write(b)
-			}),
-		})})
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatalf("could not find own executable path: %s", err)
+	}
+	err = restapi.UnixServer(exe+".sock", provide.Routes{"/state": provide.MethodGate(provide.Routes{
+		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			st := restapi.FwderState{State: state}
+			b, err := json.Marshal(st)
+			if err != nil {
+				log.Printf("error while serving /state reply: %s", err)
+				status.ErrInternal.WriteTo(w)
+				return
+			}
+			w.Write(b)
+		}),
+	})})
+	if err != nil {
+		log.Fatal(err)
+	}
 	// set up graceful signal handling
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -199,7 +199,7 @@ func main() {
 	if err := ListenSOCKS(socksaddr, dialFuncTo(h2caddr)); err != nil {
 		log.Fatalf("listening on socks5://%s failed: %s", socksaddr, err)
 	}
-	log.Printf("listening for SOCKSv5 connections on %s, state queries on %s", socksaddr, StateSock)
+	log.Printf("listening for SOCKSv5 connections on %s, state queries on %s", socksaddr, exe+".sock")
 	state = "active"
 	select {
 	case <-sigs:

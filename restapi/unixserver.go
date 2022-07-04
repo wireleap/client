@@ -3,6 +3,7 @@
 package restapi
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -18,8 +19,13 @@ func UnixServer(p string, rts provide.Routes) error {
 	if err != nil {
 		return err
 	}
-	defer l.Close()
 	mux := provide.NewMux(rts)
 	h := &http.Server{Handler: mux}
-	return h.Serve(l)
+	go func() {
+		defer l.Close()
+		if err = h.Serve(l); err != nil {
+			log.Fatalf("error when serving unix socket: %s", err)
+		}
+	}()
+	return nil
 }

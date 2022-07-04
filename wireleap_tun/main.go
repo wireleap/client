@@ -24,31 +24,32 @@ import (
 	_ "net/http/pprof"
 )
 
-const StateSock = "wireleap_socks.sock"
-
 func main() {
 	// set up state API
 	state := "activating"
-	go func() {
-		err := restapi.UnixServer(StateSock, provide.Routes{"/state": provide.MethodGate(provide.Routes{
-			http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				st := restapi.FwderState{State: state}
-				b, err := json.Marshal(st)
-				if err != nil {
-					log.Printf("error while serving /state reply: %s", err)
-					status.ErrInternal.WriteTo(w)
-					return
-				}
-				w.Write(b)
-			}),
-		})})
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatalf("could not find own executable path: %s", err)
+	}
+	err = restapi.UnixServer(exe+".sock", provide.Routes{"/state": provide.MethodGate(provide.Routes{
+		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			st := restapi.FwderState{State: state}
+			b, err := json.Marshal(st)
+			if err != nil {
+				log.Printf("error while serving /state reply: %s", err)
+				status.ErrInternal.WriteTo(w)
+				return
+			}
+			w.Write(b)
+		}),
+	})})
+	if err != nil {
+		log.Fatal(err)
+	}
 	if err := syscall.Seteuid(0); err != nil {
 		log.Fatal("could not gain privileges; check if setuid flag is set?")
 	}
+	os.Chmod(exe+".sock", 0660)
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	sh := os.Getenv("WIRELEAP_HOME")
@@ -118,6 +119,7 @@ func main() {
 		}
 		runtime.SetMutexProfileFraction(n)
 	}
+	log.Printf("listening for state queries on %s", exe+".sock")
 	if err = tunsplice(t, h2caddr, tunaddr); err != nil {
 		log.Fatal("tunsplice returned error:", err)
 	}
