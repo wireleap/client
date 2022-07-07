@@ -79,8 +79,11 @@ func Cmd(arg0 string) *cli.Subcmd {
 		Run: func(fm fsdir.T) {
 			var err error
 			c := clientcfg.Defaults()
-			if err = fm.Get(&c, filenames.Config); err != nil {
-				log.Fatalf("could not read config: %s", err)
+			// try versioned config first
+			if err := fm.Get(&c, filenames.Config+".next"); err != nil {
+				if err = fm.Get(&c, filenames.Config); err != nil {
+					log.Fatalf("could not load config file %s: %s", fm.Path(filenames.Config), err)
+				}
 			}
 			if *fg == false {
 				var pid int
