@@ -5,7 +5,6 @@ package restapi
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -67,7 +66,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			if ci := t.br.ContractInfo(); ci != nil {
 				t.reply(w, t.br.ContractInfo())
 			} else {
-				status.ErrNotFound.Wrap(fmt.Errorf("contract info is not initialized")).WriteTo(w)
+				status.NoContent.WriteTo(w)
 			}
 		}),
 	}))
@@ -76,7 +75,11 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 			rs, err := t.br.Relays()
 			if err != nil {
 				t.l.Printf("error %s while serving relays", err)
-				status.ErrNotFound.Wrap(err).WriteTo(w)
+				if errors.Is(err, fs.ErrNotExist) {
+					status.NoContent.Wrap(err).WriteTo(w)
+				} else {
+					status.ErrInternal.Wrap(err).WriteTo(w)
+				}
 				return
 			}
 			type selectableRelay struct {
