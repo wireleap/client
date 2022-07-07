@@ -107,6 +107,10 @@ var MIGRATIONS = []*upgrade.Migration{
 			if timeout, ok := oldc["timeout"].(duration.T); ok {
 				c.Broker.Circuit.Timeout = timeout
 			}
+			// replace nil with empty list
+			if c.Broker.Circuit.Whitelist == nil {
+				c.Broker.Circuit.Whitelist = make([]string, 0)
+			}
 			// address/port changes are merged automatically
 			if err := f.Set(&c, "config.json.next"); err != nil {
 				return fmt.Errorf("could not save config.json.next: %s", err)
