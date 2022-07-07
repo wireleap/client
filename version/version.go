@@ -5,9 +5,7 @@ package version
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"os/exec"
 
 	"github.com/blang/semver"
 	"github.com/wireleap/client/clientcfg"
@@ -127,25 +125,20 @@ var MIGRATIONS = []*upgrade.Migration{
 	},
 }
 
-func runSilent(args ...string) (err error) {
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	return cmd.Run()
-}
-
 // LatestChannelVersion is a special function for wireleap which will obtain
 // the latest version supported by the currently configured update channel from
 // the directory.
+// NOTE: since wireleap is not running, we need to check status out of band.
 func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
+	var pid int
 	// check if running wireleap or wireleap_tun
 	if tuncmd_platform.Available {
-		if err = runSilent(f.Path("wireleap"), "tun", "status"); err == nil {
+		if err = f.Get(&pid, "wireleap_tun.pid"); err == nil && process.Exists(pid) {
 			err = fmt.Errorf("wireleap_tun appears to be running, please stop it to upgrade")
 			return
 		}
 	}
-	if err = runSilent(f.Path("wireleap"), "status"); err == nil {
+	if err = f.Get(&pid, "wireleap.pid"); err == nil && process.Exists(pid) {
 		err = fmt.Errorf("wireleap appears to be running, please stop it to upgrade")
 		return
 	}
