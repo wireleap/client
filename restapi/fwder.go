@@ -97,9 +97,7 @@ func (t *T) registerForwarder(name string) {
 	)
 	cl.SetTransport(&http.Transport{
 		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-			c, err := net.Dial("unix", t.br.Fd.Path(bin+".sock"))
-			log.Println(c, err)
-			return c, err
+			return net.Dial("unix", t.br.Fd.Path(bin+".sock"))
 		},
 	})
 	t.mux.Handle("/forwarders/"+name, provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
