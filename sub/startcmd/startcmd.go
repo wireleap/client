@@ -48,10 +48,10 @@ func setupServer(l net.Listener, h http.Handler, tc *tls.Config) {
 	h1s := &http.Server{
 		Handler:           h,
 		TLSConfig:         tc,
-		ReadTimeout:       1 * time.Second,
-		WriteTimeout:      1 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       30 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 	h2s := &http2.Server{MaxHandlers: 0, MaxConcurrentStreams: 0}
 	if err := http2.ConfigureServer(h1s, h2s); err != nil {
