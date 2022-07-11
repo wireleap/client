@@ -83,7 +83,7 @@ func Cmd() (r *cli.Subcmd) {
 			url += "/stop"
 		case "restart":
 			meth = http.MethodPost
-			url += "/start"
+			url += "/stop"
 			// specially handled below
 		case "log":
 			url += "/log"
