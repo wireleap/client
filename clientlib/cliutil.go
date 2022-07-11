@@ -26,12 +26,12 @@ var DefaultAPIClient = func() *client.Client {
 // the intended usage of this function is that it should never fail
 // if it does fail, that's an issue with the calling code
 func JSONOrDie(w io.Writer, x interface{}) {
-	b, err := json.MarshalIndent(x, "", "  ")
-	if err != nil {
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(x); err != nil {
 		log.Fatalf("could not marshal JSON output for %+v: %s", w, err)
 	}
-	w.Write(b)
-	w.Write([]byte{'\n'})
 }
 
 func APICallOrDie(method, url string, in interface{}, out interface{}) {
