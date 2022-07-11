@@ -22,10 +22,18 @@ func Cmd(arg0 string) *cli.Subcmd {
 		Desc:    fmt.Sprintf("Stop %s controller daemon", arg0),
 		Run: func(fm fsdir.T) {
 			var (
-				pid     int
-				err     error
-				pidfile = arg0 + ".pid"
+				pid      int
+				err      error
+				pidfile  = arg0 + ".pid"
+				sockspid = "wireleap_socks.pid"
+				tunpid   = "wireleap_tun.pid"
 			)
+			if err = fm.Get(&pid, sockspid); err == nil && process.Exists(pid) {
+				log.Fatalf("`wireleap_socks` appears to be running, stop it before stopping `wireleap`")
+			}
+			if err = fm.Get(&pid, tunpid); err == nil && process.Exists(pid) {
+				log.Fatalf("`wireleap_tun` appears to be running, stop it before stopping `wireleap`")
+			}
 			if err = fm.Get(&pid, pidfile); err != nil {
 				log.Fatalf(
 					"could not get pid of %s from %s: %s",
