@@ -7,7 +7,7 @@ __wireleap_cmds() {
 }
 
 __wireleap_home() {
-    wireleap info | sed -n 's/^.*\"wireleap_home\": \"\(.*\)\",$/\1/p'
+    wireleap status | sed -n 's/^.*\"home\": \"\(.*\)\",$/\1/p'
 }
 
 __wireleap_scripts() {
