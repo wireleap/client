@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -167,6 +168,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not find own executable path: %s", err)
 	}
+	// windows...
+	exe = strings.TrimSuffix(exe, ".exe")
 	err = restapi.UnixServer(exe+".sock", provide.Routes{"/state": provide.MethodGate(provide.Routes{
 		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			st := restapi.FwderState{State: state}

@@ -5,6 +5,8 @@ import (
 	"syscall"
 )
 
+const fwderSuffix = ""
+
 func (t *T) getBinaryState(bin string) (st binaryState) {
 	fi, err := os.Stat(t.br.Fd.Path(bin))
 	if err != nil {
