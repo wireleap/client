@@ -2,6 +2,8 @@ package restapi
 
 import "os"
 
+const fwderSuffix = ".exe"
+
 func (t *T) getBinaryState(bin string) (st binaryState) {
 	if _, err := os.Stat(t.br.Fd.Path(bin)); err != nil {
 		return

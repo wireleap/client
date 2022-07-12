@@ -52,6 +52,7 @@ func boolptr(x bool) *bool { return &x }
 func (t *T) registerForwarder(name string) {
 	var (
 		bin     = fwderPrefix + name
+		fullbin = bin + fwderSuffix
 		pidfile = bin + ".pid"
 		o       = FwderReply{
 			Pid:     -1,
@@ -63,7 +64,7 @@ func (t *T) registerForwarder(name string) {
 		cl              = client.New(nil)
 		syncBinaryState = func() {
 			// NOTE this does not do any locking. locking by the caller is expected
-			st := t.getBinaryState(bin)
+			st := t.getBinaryState(fullbin)
 			// TODO can this be handled in a better way?
 			switch name {
 			case "socks":
@@ -111,12 +112,12 @@ func (t *T) registerForwarder(name string) {
 				status.ErrRequest.Wrap(err).WriteTo(w)
 			}
 		}()
-		binpath := t.br.Fd.Path(bin)
+		binpath := t.br.Fd.Path(fullbin)
 		syncBinaryState()
 		st := o.Binary.State
 		switch {
 		case !st.Exists:
-			err = fmt.Errorf("forwarder %s does not exist", bin)
+			err = fmt.Errorf("forwarder %s does not exist", fullbin)
 			return
 		case !st.ChmodX:
 			err = fmt.Errorf("could not execute %s: file is not executable (did you `chmod +x %s`?)", binpath, binpath)
@@ -139,7 +140,7 @@ func (t *T) registerForwarder(name string) {
 			"WIRELEAP_ADDR_SOCKS="+t.br.Config().Forwarders.Socks.Address,
 		)
 		if err = t.br.Fd.Get(&o.Pid, pidfile); err == nil && process.Exists(o.Pid) {
-			err = fmt.Errorf("%s daemon is already running!", bin)
+			err = fmt.Errorf("%s daemon is already running!", fullbin)
 			return
 		}
 		logpath := t.br.Fd.Path(bin + ".log")
@@ -151,7 +152,7 @@ func (t *T) registerForwarder(name string) {
 		defer logfile.Close()
 		cmd := exec.Cmd{
 			Path:   binpath,
-			Args:   []string{bin},
+			Args:   []string{fullbin},
 			Env:    env,
 			Stdout: logfile,
 			Stderr: logfile,
@@ -161,7 +162,7 @@ func (t *T) registerForwarder(name string) {
 			mu.Lock()
 			o.State = "failed"
 			mu.Unlock()
-			err = fmt.Errorf("could not spawn background %s process: %s", bin, err)
+			err = fmt.Errorf("could not spawn background %s process: %s", fullbin, err)
 			return
 		}
 		go func() {
@@ -180,7 +181,7 @@ func (t *T) registerForwarder(name string) {
 		}()
 		log.Printf(
 			"starting %s with pid %d, writing to %s...",
-			bin, cmd.Process.Pid, logpath,
+			fullbin, cmd.Process.Pid, logpath,
 		)
 		t.br.Fd.Set(cmd.Process.Pid, pidfile)
 		mu.Lock()
@@ -219,13 +220,13 @@ func (t *T) registerForwarder(name string) {
 		if err = t.br.Fd.Get(&o.Pid, pidfile); err != nil {
 			err = fmt.Errorf(
 				"could not get pid of %s from %s: %s",
-				bin, t.br.Fd.Path(pidfile), err,
+				fullbin, t.br.Fd.Path(pidfile), err,
 			)
 			return
 		}
 		if process.Exists(o.Pid) {
 			if err = process.Term(o.Pid); err != nil {
-				err = fmt.Errorf("could not terminate %s pid %d: %s", bin, o.Pid, err)
+				err = fmt.Errorf("could not terminate %s pid %d: %s", fullbin, o.Pid, err)
 				return
 			}
 		}
@@ -234,7 +235,7 @@ func (t *T) registerForwarder(name string) {
 		mu.Unlock()
 		for i := 0; i < 30; i++ {
 			if !process.Exists(o.Pid) {
-				log.Printf("stopped %s daemon (was pid %d)", bin, o.Pid)
+				log.Printf("stopped %s daemon (was pid %d)", fullbin, o.Pid)
 				t.br.Fd.Del(pidfile)
 				return
 			}
@@ -243,10 +244,10 @@ func (t *T) registerForwarder(name string) {
 		process.Kill(o.Pid)
 		time.Sleep(100 * time.Millisecond)
 		if process.Exists(o.Pid) {
-			err = fmt.Errorf("timed out waiting for %s (pid %d) to shut down -- process still alive!", bin, o.Pid)
+			err = fmt.Errorf("timed out waiting for %s (pid %d) to shut down -- process still alive!", fullbin, o.Pid)
 			return
 		}
-		log.Printf("stopped %s daemon (was pid %d)", bin, o.Pid)
+		log.Printf("stopped %s daemon (was pid %d)", fullbin, o.Pid)
 		t.br.Fd.Del(pidfile)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/log", provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
