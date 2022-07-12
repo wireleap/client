@@ -22,7 +22,7 @@ func Cmd() *cli.Subcmd {
 		FlagSet: fs,
 		Desc:    "Run executable and redirect connections (req. SOCKS forwarder)",
 	}
-	r.SetMinimalUsage("[args]")
+	r.SetMinimalUsage("[ARGS]")
 	r.Run = func(fm fsdir.T) {
 		c := clientcfg.Defaults()
 		err := fm.Get(&c, filenames.Config)
