@@ -4,5 +4,5 @@ package embedded
 
 import "embed"
 
-//go:embed scripts_windows wireleap_socks LICENSE
+//go:embed scripts_windows wireleap_socks.exe LICENSE
 var FS embed.FS
