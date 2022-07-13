@@ -87,7 +87,7 @@ func PostRollbackHook(f fsdir.T) (err error) {
 var MIGRATIONS = []*upgrade.Migration{
 	{
 		Name:    "restructuring_config",
-		Version: semver.Version{Major: 0, Minor: 5, Patch: 7},
+		Version: semver.Version{Major: 0, Minor: 6, Patch: 0},
 		Apply: func(f fsdir.T) error {
 			var oldc map[string]interface{}
 			if err := f.Get(&oldc, "config.json.next"); err != nil {
