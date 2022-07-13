@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"time"
 
@@ -49,6 +50,36 @@ type FwderState struct {
 
 func boolptr(x bool) *bool { return &x }
 
+// TODO clean up based on subcmd module-defined constant?
+func isImplemented(name string) (is bool) {
+	switch runtime.GOOS {
+	case "linux":
+		switch name {
+		case "socks":
+			is = true
+		case "tun":
+			is = true
+		}
+	case "darwin":
+		switch name {
+		case "socks":
+			is = true
+		case "tun":
+			is = true
+		}
+	case "windows":
+		switch name {
+		case "socks":
+			is = true
+		case "tun":
+			is = false
+		}
+	default:
+		is = false
+	}
+	return
+}
+
 func (t *T) registerForwarder(name string) {
 	var (
 		bin     = fwderPrefix + name
@@ -83,6 +114,10 @@ func (t *T) registerForwarder(name string) {
 		},
 	})
 	t.mux.Handle("/forwarders/"+name, provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isImplemented(name) {
+			status.ErrNotImplemented.WriteTo(w)
+			return
+		}
 		mu.Lock()
 		defer mu.Unlock()
 		t.br.Fd.Get(&o.Pid, pidfile)
@@ -104,6 +139,10 @@ func (t *T) registerForwarder(name string) {
 		t.reply(w, o)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/start", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isImplemented(name) {
+			status.ErrNotImplemented.WriteTo(w)
+			return
+		}
 		var err error
 		defer func() {
 			if err == nil {
@@ -204,6 +243,10 @@ func (t *T) registerForwarder(name string) {
 		}
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/stop", provide.MethodGate(provide.Routes{http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isImplemented(name) {
+			status.ErrNotImplemented.WriteTo(w)
+			return
+		}
 		var err error
 		defer func() {
 			if err == nil {
@@ -251,6 +294,10 @@ func (t *T) registerForwarder(name string) {
 		t.br.Fd.Del(pidfile)
 	})}))
 	t.mux.Handle("/forwarders/"+name+"/log", provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isImplemented(name) {
+			status.ErrNotImplemented.WriteTo(w)
+			return
+		}
 		logfile := t.br.Fd.Path(bin + ".log")
 		b, err := ioutil.ReadFile(logfile)
 		if err != nil {
