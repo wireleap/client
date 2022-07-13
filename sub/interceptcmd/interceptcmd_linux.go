@@ -5,10 +5,12 @@ package interceptcmd
 import (
 	"flag"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/wireleap/client/clientcfg"
 	"github.com/wireleap/client/filenames"
@@ -35,6 +37,11 @@ func Cmd() *cli.Subcmd {
 		}
 		switch runtime.GOOS {
 		case "linux":
+			conn, err := net.DialTimeout("tcp", *c.Broker.Address, time.Second)
+			if err != nil {
+				log.Fatalf("could not connect to wireleap broker at address %s: %s", *c.Broker.Address, err)
+			}
+			conn.Close()
 			lib := fm.Path("wireleap_intercept.so")
 			args := fs.Args()
 
