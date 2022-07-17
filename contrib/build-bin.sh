@@ -51,7 +51,7 @@ go get -v -d ./...
 CGO_ENABLED=0 go build
 cd -
 if [ "$GOOS" = 'windows' ]; then
-    mv "$SRCDIR/wireleap_socks/wireleap_socks.exe" "$SRCDIR/sub/initcmd/embedded/wireleap_socks"
+    mv "$SRCDIR/wireleap_socks/wireleap_socks.exe" "$SRCDIR/sub/initcmd/embedded/wireleap_socks.exe"
 else
     mv "$SRCDIR/wireleap_socks/wireleap_socks" "$SRCDIR/sub/initcmd/embedded/wireleap_socks"
 fi
