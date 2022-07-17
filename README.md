@@ -414,19 +414,13 @@ fail silently instead of tunneling through the configured circuit.
 
 For example on macOS, if the built-in [application firewall](https://support.apple.com/en-us/HT201642)
 is enabled this could happen. To remedy this, a firewall rule needs to
-be added for `wireleap`. Starting the wireleap tun daemon in the
-**foreground** should bring up a prompt asking *whether to allow
-incoming connections to wireleap*. You should answer **ALLOW**.
+be added for `wireleap`.
 
-```shell
-wireleap tun start --fg
-```
-
-If there is no prompt, try [adding the wireleap binary manually](https://support.apple.com/guide/mac-help/block-connections-to-your-mac-with-a-firewall-mh34041/mac#mchlp218b2b0)
+Try [adding the wireleap binary manually](https://support.apple.com/guide/mac-help/block-connections-to-your-mac-with-a-firewall-mh34041/mac#mchlp218b2b0)
 in the firewall settings with the firewall mode set to **Allow incoming
 connections**.
 
-If none of that works, disabling the firewall altogether would allow
+If that does not work, disabling the firewall altogether would allow
 `wireleap tun` to work. However, please note that disabling the firewall
 may affect the security the system.
 
