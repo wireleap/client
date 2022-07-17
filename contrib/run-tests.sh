@@ -41,6 +41,17 @@ if [ "$GOOS" = 'linux' ] || [ "$GOOS" = 'darwin' ]; then
     mv wireleap_tun/wireleap_tun "$SRCDIR/sub/initcmd/embedded"
 fi
 
+info "building wireleap_socks"
+cd "$SRCDIR/wireleap_socks"
+go get -v -d ./...
+CGO_ENABLED=0 go build
+cd -
+if [ "$GOOS" = 'windows' ]; then
+    mv "$SRCDIR/wireleap_socks/wireleap_socks.exe" "$SRCDIR/sub/initcmd/embedded/wireleap_socks.exe"
+else
+    mv "$SRCDIR/wireleap_socks/wireleap_socks" "$SRCDIR/sub/initcmd/embedded/wireleap_socks"
+fi
+
 VERSIONS=
 for c in common/api common/cli client; do
     VERSIONS="$VERSIONS -X github.com/wireleap/$c/version.GITREV=$GITVERSION"
