@@ -52,7 +52,7 @@ Run 'wireleap help COMMAND' for more information on a command.
 
 ```
 $ wireleap help init
-Usage: wireleap init [options]
+Usage: wireleap init [OPTIONS]
 
 Initialize wireleap home directory
 
@@ -69,14 +69,14 @@ Usage: wireleap config [KEY [VALUE]]
 Get or set wireleap configuration settings
 
 Keys:
-  address                        (string) Controller address
-  broker.address                 (string) Override default broker address
-  broker.accesskey.use_on_demand (bool)   Activate accesskeys as needed
-  broker.circuit.timeout         (string) Dial timeout duration
-  broker.circuit.hops            (int)    Number of relays to use in a circuit
-  broker.circuit.whitelist       (list)   Relay addresses to use in circuit
-  forwarders.socks.address       (string) SOCKSv5 proxy address
-  forwarders.tun.address         (string) TUN device address (not loopback)
+  address                        (str)  Controller address
+  broker.address                 (str)  Override default broker address
+  broker.accesskey.use_on_demand (bool) Activate accesskeys as needed
+  broker.circuit.timeout         (str)  Dial timeout duration
+  broker.circuit.hops            (int)  Number of relays to use in a circuit
+  broker.circuit.whitelist       (list) Relay addresses to use in circuit
+  forwarders.socks.address       (str)  SOCKSv5 proxy address
+  forwarders.tun.address         (str)  TUN device address (not loopback)
 
 To unset a key, specify `null` as the value
 ```
@@ -90,16 +90,16 @@ Usage: wireleap accesskeys COMMAND
 Manage accesskeys
 
 Commands:
-  list          List accesskeys
-  import        Import accesskeys from FILE|URL and set up associated contract
-  activate      Trigger accesskey activation (accesskey.use_on_demand=false)
+  list      List accesskeys
+  import    Import accesskeys from URL and set up associated contract
+  activate  Trigger accesskey activation (accesskey.use_on_demand=false)
 ```
 
 ## wireleap start
 
 ```
 $ wireleap help start
-Usage: wireleap start [options]
+Usage: wireleap start [OPTIONS]
 
 Start wireleap controller daemon
 
@@ -173,7 +173,7 @@ Show wireleap controller daemon logs
 $ wireleap help tun
 Usage: wireleap tun COMMAND [OPTIONS]
 
-Control tun device
+Control TUN device forwarder
 
 Commands:
   start         Start wireleap_tun daemon
@@ -203,7 +203,7 @@ Commands:
 
 ```
 $ wireleap help intercept
-Usage: wireleap intercept [args]
+Usage: wireleap intercept [ARGS]
 
 Run executable and redirect connections (req. SOCKS forwarder)
 ```
@@ -217,7 +217,7 @@ Usage: wireleap exec COMMAND|FILENAME
 Execute script from scripts directory (req. SOCKS forwarder)
 
 Commands:
-  list          List available scripts in scripts directory
+  list  List available scripts in scripts directory
 ```
 
 ## wireleap upgrade
@@ -242,7 +242,7 @@ Undo a partially completed upgrade
 
 ```
 $ wireleap help version
-Usage: wireleap version [options]
+Usage: wireleap version [OPTIONS]
 
 Show version and exit
 
