@@ -62,5 +62,9 @@ func (t *T) accesskeysFromPofs(pofs ...*pof.T) (rs []*AccesskeyReply) {
 func (t *T) newAccesskeysReply() (rs []*AccesskeyReply) {
 	rs = append(rs, t.accesskeysFromSks(t.br.CurrentSK())...)
 	rs = append(rs, t.accesskeysFromPofs(t.br.CurrentPofs()...)...)
+	// serve empty list instead of nil
+	if rs == nil {
+		rs = make([]*AccesskeyReply, 0)
+	}
 	return
 }
