@@ -93,11 +93,7 @@ func Init(t *tun.T, tunaddr string) error {
 
 type linuxRoutes struct{ rts []netlink.Route }
 
-func RoutesUp(sh string) (Routes, error) {
-	ips, err := ReadBypass(sh)
-	if err != nil {
-		return nil, fmt.Errorf("could not read bypass file: %s", err)
-	}
+func RoutesUp(ips ...net.IP) (Routes, error) {
 	bypassrts, err := mkroutes(ips)
 	if err != nil {
 		return nil, fmt.Errorf("could not create routes to bypass IPs: %s", err)

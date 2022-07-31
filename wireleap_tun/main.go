@@ -4,8 +4,10 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -13,7 +15,6 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/wireleap/client/restapi"
 	"github.com/wireleap/client/wireleap_tun/netsetup"
 	"github.com/wireleap/client/wireleap_tun/tun"
@@ -31,18 +32,57 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not find own executable path: %s", err)
 	}
-	err = restapi.UnixServer(exe+".sock", provide.Routes{"/state": provide.MethodGate(provide.Routes{
-		http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			st := restapi.FwderState{State: state}
-			b, err := json.Marshal(st)
-			if err != nil {
-				log.Printf("error while serving /state reply: %s", err)
-				status.ErrInternal.WriteTo(w)
-				return
-			}
-			w.Write(b)
+	bypass := bypassList{}
+	err = restapi.UnixServer(exe+".sock", provide.Routes{
+		"/state": provide.MethodGate(provide.Routes{
+			http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				st := restapi.FwderState{State: state}
+				b, err := json.Marshal(st)
+				if err != nil {
+					log.Printf("error while serving /state reply: %s", err)
+					status.ErrInternal.WriteTo(w)
+					return
+				}
+				w.Write(b)
+			}),
 		}),
-	})})
+		"/bypass": provide.MethodGate(provide.Routes{
+			http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				b, err := json.Marshal(bypass.Get())
+				if err != nil {
+					log.Printf("error while serving /bypass GET reply: %s", err)
+					status.ErrInternal.WriteTo(w)
+					return
+				}
+				w.Write(b)
+			}),
+			http.MethodPost: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ips := []net.IP{}
+				b, err := io.ReadAll(r.Body)
+				if err != nil {
+					log.Printf("error while reading /bypass POST request body: %s", err)
+					status.ErrRequest.WriteTo(w)
+					return
+				}
+				err = json.Unmarshal(b, &ips)
+				if err != nil {
+					log.Printf("error while unmarshaling /bypass POST request body: %s", err)
+					status.ErrRequest.WriteTo(w)
+					return
+				}
+				if err = bypass.Set(ips...); err != nil {
+					// hard fail here to catch bugs & avoid inadvertent leaks
+					// TODO maybe soft fail in the future
+					log.Fatalf("could not configure routes: %s", err)
+				}
+				status.OK.WriteTo(w)
+			}),
+			http.MethodDelete: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				bypass.Clear()
+				status.OK.WriteTo(w)
+			}),
+		}),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,27 +106,14 @@ func main() {
 	if err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
 		log.Fatalf("could not set RLIMIT_NOFILE to %+v", rlim)
 	}
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatalf("could not set up file watcher: %s", err)
-	}
-	defer watcher.Close()
-	err = watcher.Add(path.Join(sh, "bypass.json"))
-	if err != nil {
-		log.Fatalf("could not add bypass.json to file watcher: %s", err)
-	}
 	if err = netsetup.Init(t, tunaddr); err != nil {
 		log.Fatalf("could not configure tun device %s as %s: %s", t.Name(), tunaddr, err)
-	}
-	rts, err := netsetup.RoutesUp(sh)
-	if err != nil {
-		log.Fatalf("could not configure routes to tun device %s: %s", t.Name(), err)
 	}
 	pidfile := path.Join(sh, "wireleap_tun.pid")
 	finalize := func() {
 		// don't need to delete catch-all routes via tun dev as they will be
 		// removed when the device is down
-		rts.Down()
+		bypass.Clear()
 		os.Remove(pidfile)
 	}
 	defer finalize()
@@ -130,23 +157,6 @@ func main() {
 			state = "deactivating"
 			log.Printf("terminating on signal %s", s)
 			return
-		case _, ok := <-watcher.Events:
-			if !ok {
-				state = "failed"
-				return
-			}
-			if err = rts.Down(); err != nil {
-				log.Printf("error while bringing down old routes: %s", err)
-			}
-			if rts, err = netsetup.RoutesUp(sh); err != nil {
-				log.Fatalf("could not set new routes: %s", err)
-			}
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				state = "failed"
-				return
-			}
-			log.Println("error while watching files:", err)
 		}
 	}
 }

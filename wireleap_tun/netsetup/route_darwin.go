@@ -242,12 +242,8 @@ func Init(t *tun.T, tunaddr string) error {
 
 type darwinRoutes struct{ rts []*route.RouteMessage }
 
-func RoutesUp(sh string) (Routes, error) {
+func RoutesUp(ips ...net.IP) (Routes, error) {
 	log.Printf("bringing up bypass routes...")
-	ips, err := ReadBypass(sh)
-	if err != nil {
-		return nil, fmt.Errorf("could not read bypass file: %s", err)
-	}
 	bypassrts, err := mkroutes(ips)
 	if err != nil {
 		return nil, fmt.Errorf("could not create routes to bypass IPs: %s", err)
