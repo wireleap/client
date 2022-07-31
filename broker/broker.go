@@ -63,6 +63,8 @@ type T struct {
 	upgrade bool
 	// upgrade val lock (has to be separate from global)
 	uMu sync.Mutex
+	// unix socket client
+	ucl *client.Client
 }
 
 func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
@@ -95,13 +97,20 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 	t.T.Transport.DialContext = t.cache.Cover(t.T.Transport.DialContext)
 	t.T.Transport.DialTLSContext = t.cache.Cover(t.T.Transport.DialTLSContext)
 	t.cl.Transport = t.T.Transport
-	if clientlib.ContractURL(t.Fd) != nil {
+	t.ucl = client.New(nil)
+	t.ucl.RetryOpt.Tries = 1
+	t.ucl.RetryOpt.Interval = 1 * time.Millisecond
+	t.ucl.RetryOpt.Verbose = false
+	// TODO: unhardcode
+	t.ucl.SetTransport(&http.Transport{
+		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+			return net.Dial("unix", t.Fd.Path("wireleap_tun.sock"))
+		},
+	})
+	if cu := clientlib.ContractURL(t.Fd); cu != nil {
 		// cache dns, sc and directory data if we can
-		var (
-			di dirinfo.T
-			rl relaylist.T
-		)
-		if di, rl, err = t.Sync(); err != nil {
+		var rl relaylist.T
+		if _, rl, err = t.Sync(); err != nil {
 			t.l.Fatalf("could not get contract info: %s", err)
 		}
 		// cache relay ip addresses for tun
@@ -112,13 +121,8 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 				}
 			}
 		}
-		// write bypass for tun
-		if err = t.writeBypass(t.cache.Get(di.Endpoint.Hostname())...); err != nil {
-			t.l.Fatalf(
-				"could not write first bypass file %s: %s",
-				t.Fd.Path(filenames.Bypass), err,
-			)
-		}
+		t.cache.Cache(context.Background(), cu.Hostname())
+		t.cache.Cache(context.Background(), t.ci.Directory.Endpoint.Hostname())
 	}
 	t.cl.RetryOpt.Interval = 1 * time.Second
 	return t
@@ -160,8 +164,9 @@ func (t *T) Circuit() (r []*relayentry.T, err error) {
 		return
 	}
 	t.circ = r
-	// expose bypass for wireleap_tun
-	err = t.writeBypass(t.cache.Get(r[0].Addr.Hostname())...)
+	// ignore error here as tun is not necessarily running
+	// TODO expose whether tun is running cleanly
+	_ = t.writeBypass(t.cache.Get(t.circ[0].Addr.Hostname())...)
 	return
 }
 
@@ -179,7 +184,13 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fwdr = "unnamed_forwarder"
 	}
 	t.l.Printf("%s forwarder connected", fwdr)
-
+	if fwdr == "tun" && t.circ == nil {
+		// expose basic (just sc/dir, no extra) bypass for wireleap_tun
+		if err := t.writeBypass(); err != nil {
+			status.ErrInternal.Wrap(fmt.Errorf("could not write basic bypass: %w", err)).WriteTo(w)
+		}
+		return
+	}
 	dialf := t.T.DialWL
 	// force target protocol if needed
 	tproto, ok := os.LookupEnv("WIRELEAP_TARGET_PROTOCOL")
@@ -191,7 +202,6 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return dialf(c, proto, remote, p)
 		}
 	}
-
 	dialer := clientlib.CircuitDialer(
 		func() (*servicekey.T, error) { return t.GetSK(true) },
 		t.Circuit,
@@ -229,12 +239,24 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rwc.Close()
 }
 
-// write bypass.json file
+// TODO: unhardcode
+// write bypass to tun bypass API
 func (t *T) writeBypass(extra ...string) error {
-	// expose bypass for wireleap_tun
+	// contract/dir is always bypassed
 	sc := t.cache.Get(clientlib.ContractURL(t.Fd).Hostname())
-	bypass := append(sc, extra...)
-	return t.Fd.Set(bypass, filenames.Bypass)
+	dir := t.cache.Get(t.ci.Directory.Endpoint.Hostname())
+	bypass := append(append(sc, dir...), extra...)
+	var out *status.T
+	if err := t.ucl.Perform(http.MethodPost, "http://localhost/bypass", bypass, &out); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			if errors.As(err, &out) {
+				return out
+			} else {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
