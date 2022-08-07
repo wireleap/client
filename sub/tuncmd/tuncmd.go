@@ -64,6 +64,9 @@ func Cmd() (r *cli.Subcmd) {
 		case "status":
 			// url defined above is usable as-is
 		case "start":
+			if clientlib.ContractURL(fm) == nil {
+				log.Fatalf("no contract configured; import accesskey before starting tun")
+			}
 			meth = http.MethodPost
 			url += "/start"
 		case "stop":
