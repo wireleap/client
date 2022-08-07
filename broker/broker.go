@@ -308,6 +308,12 @@ func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
 		)
 		return
 	}
+	// cache relay ip addresses for tun
+	for _, r := range rl.All() {
+		if err = t.cache.Cache(context.Background(), r.Addr.Hostname()); err != nil {
+			t.l.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
+		}
+	}
 	if err = clientlib.SaveContractInfo(t.Fd, t.ci, rl); err != nil {
 		err = fmt.Errorf("could not save contract info: %w", err)
 		return
