@@ -17,7 +17,7 @@ import (
 var DefaultAPIClient = func() *client.Client {
 	cl := client.New(nil)
 	cl.RetryOpt.Tries = 100
-	cl.RetryOpt.Interval = 100 * time.Millisecond
+	cl.RetryOpt.Interval = 150 * time.Millisecond
 	cl.RetryOpt.Verbose = false
 	return cl
 }()
