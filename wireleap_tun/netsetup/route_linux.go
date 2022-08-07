@@ -20,20 +20,32 @@ var filter = &netlink.Route{Dst: nil}
 // do not add but replace
 func mkroutes(ips []net.IP) (routes []netlink.Route, err error) {
 	for _, ip := range ips {
-		if ip.IsLoopback() || ip.IsUnspecified() || ip.To4() == nil {
-			// don't need routes for these... TODO FIXME ipv6
+		if ip.IsLoopback() || ip.IsUnspecified() {
+			// don't need routes for these...
 			continue
 		}
 		var tmp []netlink.Route
 		// get default route(s)
-		if tmp, err = netlink.RouteListFiltered(netlink.FAMILY_V4, filter, netlink.RT_FILTER_DST); err != nil {
+		v6 := ip.To4() == nil
+		if v6 {
+			tmp, err = netlink.RouteListFiltered(netlink.FAMILY_V6, filter, netlink.RT_FILTER_DST)
+		} else {
+			tmp, err = netlink.RouteListFiltered(netlink.FAMILY_V4, filter, netlink.RT_FILTER_DST)
+		}
+		if err != nil {
 			err = fmt.Errorf("could not get route(s) to %s: %s", ip, err)
 			return
 		}
 		// route bypass ips as default route
 		for _, r := range tmp {
 			if r.Gw != nil {
-				r.Dst = &net.IPNet{IP: ip, Mask: net.CIDRMask(32, 32)}
+				var mask net.IPMask
+				if v6 {
+					mask = net.CIDRMask(128, 128)
+				} else {
+					mask = net.CIDRMask(32, 32)
+				}
+				r.Dst = &net.IPNet{IP: ip, Mask: mask}
 				routes = append(routes, r)
 			}
 		}
