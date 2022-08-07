@@ -233,6 +233,10 @@ func (t *T) registerForwarder(name string) {
 				mu.Lock()
 				o.State = fst.State
 				mu.Unlock()
+				// TODO find a more elegant/general place for this
+				if name == "tun" {
+					_ = t.br.WriteBypass()
+				}
 				break
 			} else {
 				mu.Lock()
