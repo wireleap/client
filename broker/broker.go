@@ -188,8 +188,8 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// expose basic (just sc/dir, no extra) bypass for wireleap_tun
 		if err := t.writeBypass(); err != nil {
 			status.ErrInternal.Wrap(fmt.Errorf("could not write basic bypass: %w", err)).WriteTo(w)
+			return
 		}
-		return
 	}
 	dialf := t.T.DialWL
 	// force target protocol if needed
