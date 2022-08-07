@@ -184,13 +184,6 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fwdr = "unnamed_forwarder"
 	}
 	t.l.Printf("%s forwarder connected", fwdr)
-	if fwdr == "tun" && t.circ == nil {
-		// expose basic (just sc/dir, no extra) bypass for wireleap_tun
-		if err := t.writeBypass(); err != nil {
-			status.ErrInternal.Wrap(fmt.Errorf("could not write basic bypass: %w", err)).WriteTo(w)
-			return
-		}
-	}
 	dialf := t.T.DialWL
 	// force target protocol if needed
 	tproto, ok := os.LookupEnv("WIRELEAP_TARGET_PROTOCOL")
@@ -266,6 +259,19 @@ func (t *T) writeBypass(extra ...string) error {
 		}
 	}
 	return nil
+}
+
+func (t *T) WriteBypass() (err error) {
+	if t.circ == nil {
+		if err = t.writeBypass(); err != nil {
+			err = fmt.Errorf("could not write sc/dir bypass: %w", err)
+		}
+	} else {
+		if err = t.writeBypass(t.cache.Get(t.circ[0].Addr.Hostname())...); err != nil {
+			err = fmt.Errorf("could not write sc/dir/relay bypass: %w", err)
+		}
+	}
+	return
 }
 
 func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
