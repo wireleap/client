@@ -243,7 +243,16 @@ func (t *T) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // write bypass to tun bypass API
 func (t *T) writeBypass(extra ...string) error {
 	// contract/dir is always bypassed
+	if clientlib.ContractURL(t.Fd) == nil {
+		return fmt.Errorf("no contract is configured yet")
+	}
 	sc := t.cache.Get(clientlib.ContractURL(t.Fd).Hostname())
+	if t.ci == nil {
+		return fmt.Errorf("no contract info is available")
+	}
+	if t.ci.Directory.Endpoint == nil {
+		return fmt.Errorf("no directory endpoint is available")
+	}
 	dir := t.cache.Get(t.ci.Directory.Endpoint.Hostname())
 	bypass := append(append(sc, dir...), extra...)
 	var out *status.T
