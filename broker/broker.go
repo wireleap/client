@@ -59,6 +59,8 @@ type T struct {
 	pofs []*pof.T
 	// contract info
 	ci *contractinfo.T
+	// relay list
+	rl relaylist.T
 	// need upgrading?
 	upgrade bool
 	// upgrade val lock (has to be separate from global)
@@ -109,13 +111,12 @@ func New(fd fsdir.T, cfg *clientcfg.C, l *log.Logger) *T {
 	})
 	if cu := clientlib.ContractURL(t.Fd); cu != nil {
 		// cache dns, sc and directory data if we can
-		var rl relaylist.T
-		if _, rl, err = t.Sync(); err != nil {
+		if err = t.Sync(); err != nil {
 			t.l.Fatalf("could not get contract info: %s", err)
 		}
 		// cache relay ip addresses for tun
-		if rl != nil {
-			for _, r := range rl.All() {
+		if t.rl != nil {
+			for _, r := range t.rl.All() {
 				if err = t.cache.Cache(context.Background(), r.Addr.Hostname()); err != nil {
 					t.l.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
 				}
@@ -142,20 +143,16 @@ func (t *T) Circuit() (r []*relayentry.T, err error) {
 	if t.circ != nil {
 		return t.circ, nil
 	}
-	var rl relaylist.T
-	if _, rl, err = t.Sync(); err != nil {
-		return nil, err
-	}
 	var all circuit.T
 	haveWL := t.cfg.Broker.Circuit.Whitelist != nil && len(t.cfg.Broker.Circuit.Whitelist) > 0
 	if haveWL {
 		for _, addr := range t.cfg.Broker.Circuit.Whitelist {
-			if rl[addr] != nil {
-				all = append(all, rl[addr])
+			if t.rl[addr] != nil {
+				all = append(all, t.rl[addr])
 			}
 		}
 	} else {
-		all = rl.All()
+		all = t.rl.All()
 	}
 	if r, err = circuit.Make(t.cfg.Broker.Circuit.Hops, all); err != nil {
 		if haveWL {
@@ -274,7 +271,7 @@ func (t *T) WriteBypass() (err error) {
 	return
 }
 
-func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
+func (t *T) Sync() (err error) {
 	sc := clientlib.ContractURL(t.Fd)
 	if sc == nil {
 		err = fmt.Errorf("contract is not defined")
@@ -287,6 +284,7 @@ func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
 		)
 		return
 	}
+	var di dirinfo.T
 	if di, err = consume.DirectoryInfo(t.cl, sc); err != nil {
 		err = fmt.Errorf("could not get contract directory info: %w", err)
 		return
@@ -307,7 +305,7 @@ func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
 			}
 		}
 	}
-	if rl, err = consume.ContractRelays(t.cl, sc); err != nil {
+	if t.rl, err = consume.ContractRelays(t.cl, sc); err != nil {
 		err = fmt.Errorf(
 			"could not get contract relays for %s: %s",
 			sc.String(), err,
@@ -315,12 +313,14 @@ func (t *T) Sync() (di dirinfo.T, rl relaylist.T, err error) {
 		return
 	}
 	// cache relay ip addresses for tun
-	for _, r := range rl.All() {
-		if err = t.cache.Cache(context.Background(), r.Addr.Hostname()); err != nil {
-			t.l.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
+	for _, r := range t.rl.All() {
+		if t.cache.Get(r.Addr.Hostname()) == nil {
+			if err = t.cache.Cache(context.Background(), r.Addr.Hostname()); err != nil {
+				t.l.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
+			}
 		}
 	}
-	if err = clientlib.SaveContractInfo(t.Fd, t.ci, rl); err != nil {
+	if err = clientlib.SaveContractInfo(t.Fd, t.ci, t.rl); err != nil {
 		err = fmt.Errorf("could not save contract info: %w", err)
 		return
 	}
@@ -339,7 +339,7 @@ func (t *T) reload() {
 		return
 	}
 	// refresh contract info
-	if _, _, err := t.Sync(); err != nil {
+	if err := t.Sync(); err != nil {
 		t.l.Printf(
 			"could not refresh contract info: %s, aborting reload",
 			err,
