@@ -4,6 +4,7 @@ package broker
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -162,6 +163,16 @@ func (t *T) Import(u url.URL) (ak *accesskey.T, err error) {
 				"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
 				v, version.VERSION,
 			)
+		}
+	}
+	t.rl = d
+	// cache relay ip addresses for tun
+	for _, r := range t.rl.All() {
+		if t.cache.Get(r.Addr.Hostname()) == nil {
+			t.l.Println(r.Addr.Hostname(), "not in cache")
+			if err = t.cache.Cache(context.Background(), r.Addr.Hostname()); err != nil {
+				t.l.Printf("could not cache %s: %s", r.Addr.Hostname(), err)
+			}
 		}
 	}
 	return
