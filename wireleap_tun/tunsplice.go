@@ -106,6 +106,8 @@ func listenDual(tunif *tun.T, tunaddr string) (if4, if6 *net.TCPAddr, err error)
 		go tcpfwd(l4)
 	}
 	if if6 != nil {
+		// get rid of ipv6 bind heisenbug
+		time.Sleep(100 * time.Millisecond)
 		l6, err := net.ListenTCP("tcp6", if6)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not listen v6 on %s: %s", if6, err)
