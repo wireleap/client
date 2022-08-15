@@ -114,10 +114,6 @@ func (t *T) registerForwarder(name string) {
 		},
 	})
 	t.mux.Handle("/forwarders/"+name, provide.MethodGate(provide.Routes{http.MethodGet: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !isImplemented(name) {
-			status.ErrNotImplemented.WriteTo(w)
-			return
-		}
 		mu.Lock()
 		defer mu.Unlock()
 		t.br.Fd.Get(&o.Pid, pidfile)
@@ -156,7 +152,7 @@ func (t *T) registerForwarder(name string) {
 		st := o.Binary.State
 		switch {
 		case !st.Exists:
-			err = fmt.Errorf("forwarder %s does not exist", fullbin)
+			err = fmt.Errorf("forwarder binary %s does not exist", fullbin)
 			return
 		case !st.ChmodX:
 			err = fmt.Errorf("could not execute %s: file is not executable (did you `chmod +x %s`?)", binpath, binpath)
