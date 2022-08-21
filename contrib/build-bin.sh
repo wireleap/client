@@ -24,7 +24,7 @@ OUTDIR="$(realpath "$1")"
 [ -d "$OUTDIR" ] || mkdir -p "$OUTDIR"
 
 SRCDIR="$(dirname "$(dirname "$(realpath "$0")")")"
-GITVERSION="$($SRCDIR/contrib/gitversion.sh)"
+GITVERSION="${GITVERSION:-$($SRCDIR/contrib/gitversion.sh)}"
 GITCOMMIT="$(git rev-parse HEAD)"
 
 GOOS=${GOOS:-$(go env GOOS)}
