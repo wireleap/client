@@ -146,13 +146,6 @@ func LatestChannelVersion(f fsdir.T) (_ semver.Version, err error) {
 		err = fmt.Errorf("wireleap appears to be running, please stop it to upgrade")
 		return
 	}
-	if tuncmd_platform.Available && !process.Writable(f.Path("wireleap_tun")) {
-		err = fmt.Errorf(
-			"%s is not writable by current user: %s, please remove it manually to upgrade",
-			f.Path("wireleap_tun"), err,
-		)
-		return
-	}
 	c := clientcfg.Defaults()
 	if err = f.Get(&c, filenames.Config); err != nil {
 		return
