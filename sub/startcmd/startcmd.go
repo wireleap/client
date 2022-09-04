@@ -117,11 +117,10 @@ func Cmd(arg0 string) *cli.Subcmd {
 				}
 				// assuming failed by default
 				st := restapi.StatusReply{
-					Home:    fm.Path(),
-					Pid:     -1,
-					State:   "failed",
-					Broker:  restapi.StatusBroker{},
-					Upgrade: restapi.StatusUpgrade{},
+					Home:   fm.Path(),
+					Pid:    -1,
+					State:  "failed",
+					Broker: restapi.StatusBroker{},
 				}
 				clientlib.APICallOrDie(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st)
 				return

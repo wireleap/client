@@ -46,11 +46,10 @@ func Cmd(arg0 string) *cli.Subcmd {
 				}
 			}
 			o := restapi.StatusReply{
-				Home:    fm.Path(),
-				Pid:     -1,
-				State:   "inactive",
-				Broker:  restapi.StatusBroker{},
-				Upgrade: restapi.StatusUpgrade{},
+				Home:   fm.Path(),
+				Pid:    -1,
+				State:  "inactive",
+				Broker: restapi.StatusBroker{},
 			}
 			for i := 0; i < 30; i++ {
 				if !process.Exists(pid) {
