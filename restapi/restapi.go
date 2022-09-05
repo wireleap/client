@@ -177,7 +177,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				Pid:     os.Getpid(),
 				State:   "active",
 				Broker:  StatusBroker{ActiveCircuit: circList},
-				Upgrade: StatusUpgrade{Required: t.br.IsUpgradeable()},
+				Upgrade: &StatusUpgrade{Required: t.br.IsUpgradeable()},
 			})
 		}),
 	}))
@@ -193,7 +193,7 @@ func New(br *broker.T, l *log.Logger) (t *T) {
 				Pid:     os.Getpid(),
 				State:   "active",
 				Broker:  StatusBroker{ActiveCircuit: circList},
-				Upgrade: StatusUpgrade{Required: t.br.IsUpgradeable()},
+				Upgrade: &StatusUpgrade{Required: t.br.IsUpgradeable()},
 			})
 		}),
 	}))
