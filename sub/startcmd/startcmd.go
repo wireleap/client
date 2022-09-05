@@ -4,6 +4,7 @@ package startcmd
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -21,6 +22,7 @@ import (
 	"github.com/wireleap/client/clientlib"
 	"github.com/wireleap/client/filenames"
 	"github.com/wireleap/client/restapi"
+	"github.com/wireleap/common/api/status"
 	"github.com/wireleap/common/cli"
 	"github.com/wireleap/common/cli/fsdir"
 	"github.com/wireleap/common/cli/process"
@@ -116,13 +118,31 @@ func Cmd(arg0 string) *cli.Subcmd {
 					log.Fatalf("could not spawn background %s process: %s", arg0, err)
 				}
 				// assuming failed by default
-				st := restapi.StatusReply{
+				str := restapi.StatusReply{
 					Home:   fm.Path(),
 					Pid:    -1,
 					State:  "failed",
 					Broker: restapi.StatusBroker{},
 				}
-				clientlib.APICallOrDie(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &st)
+				if err = clientlib.DefaultAPIClient.Perform(http.MethodGet, "http://"+*c.Address+"/api/status", nil, &str); err != nil {
+					st := &status.T{}
+					if errors.As(err, &st) {
+						// error returned from API can be jsonized
+						clientlib.JSONOrDie(os.Stdout, st)
+						os.Exit(1)
+					} else {
+						// NOTE: special exit code for fail due to upgrade requirement.
+						// TODO FIXME needs a better way to signal this
+						if _ = cmd.Wait(); cmd.ProcessState.ExitCode() == 26 {
+							str.Upgrade = &restapi.StatusUpgrade{Required: true}
+							clientlib.JSONOrDie(os.Stdout, str)
+							os.Exit(1)
+						}
+						log.Fatalf("error while executing API request: %s", err)
+					}
+				} else {
+					clientlib.JSONOrDie(os.Stdout, str)
+				}
 				return
 			}
 			if c.Broker.Address == nil {

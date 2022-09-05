@@ -298,10 +298,13 @@ func (t *T) Sync() (err error) {
 				t.l.Printf("Upgrade available to %s, current version is %s. ", v, version.VERSION)
 				t.l.Printf("Last upgrade attempt to %s failed! Keeping current version; please upgrade when possible.", skipv)
 			} else {
-				t.l.Fatalf(
+				t.l.Printf(
 					"Upgrade available to %s, current version is %s. Please run `wireleap upgrade`.",
 					v, version.VERSION,
 				)
+				// NOTE: special exit code for fail due to upgrade requirement.
+				// TODO FIXME needs a better way to signal this
+				os.Exit(26)
 			}
 		}
 	}
