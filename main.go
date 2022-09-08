@@ -19,6 +19,7 @@ import (
 	"github.com/wireleap/client/sub/accesskeyscmd"
 	"github.com/wireleap/client/sub/configcmd"
 	"github.com/wireleap/client/sub/execcmd"
+	"github.com/wireleap/client/sub/httpgetcmd"
 	"github.com/wireleap/client/sub/initcmd"
 	"github.com/wireleap/client/sub/interceptcmd"
 	"github.com/wireleap/client/sub/logcmd"
@@ -52,6 +53,7 @@ func main() {
 			tuncmd.Cmd(),
 			sockscmd.Cmd(),
 			interceptcmd.Cmd(),
+			httpgetcmd.Cmd(),
 			execcmd.Cmd(),
 			upgradecmd.Cmd(
 				binname,
