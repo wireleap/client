@@ -24,7 +24,7 @@ func Cmd() *cli.Subcmd {
 	fs := flag.NewFlagSet("httpget", flag.ExitOnError)
 	r := &cli.Subcmd{
 		FlagSet: fs,
-		Desc:    "Run a HTTP GET through the circuit",
+		Desc:    "Perform a HTTP GET through the circuit (experimental)",
 	}
 	r.SetMinimalUsage("[URL]")
 	r.Run = func(fm fsdir.T) {
