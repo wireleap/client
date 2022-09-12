@@ -259,6 +259,32 @@ reload`).
 
 ## Forwarders
 
+### Individual HTTP GET requests
+
+The `httpget` forwarder can be used to issue a HTTP GET request to a
+particular URL through the currently active Wireleap circuit. This
+functionality can be used to test if a Wireleap circuit is working, for
+example as such:
+
+```shell
+# find out what the usual public IP is
+curl https://ifconfig.co
+
+# start the wireleap controller (if not already running)
+wireleap start
+
+# issue GET request through wireleap circuit
+wireleap httpget https://ifconfig.co
+# the IP here should be different to the public IP of the machine
+```
+
+Please note that the `httpget` forwarder will only function if
+`wireleap` can obtain a circuit successfully (i. e. an accesskey is set
+up).
+If that is not the case, it will fail and write the error to the log.
+Reporting the encountered error on the CLI is not implemented yet but
+planned.
+
 ### Specific traffic (SOCKSv5)
 
 To forward specific traffic on a system through the `wireleap`
