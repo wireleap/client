@@ -4,8 +4,11 @@
 package version
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
+	"os"
 
 	"github.com/blang/semver"
 	"github.com/wireleap/client/clientcfg"
@@ -43,6 +46,16 @@ const Channel = "default"
 
 // Post-upgrade hook for superviseupgradecmd.
 func PostUpgradeHook(f fsdir.T) (err error) {
+	if tuncmd_platform.Available {
+		log.Println("moving wireleap_tun to wireleap_tun.prev for potential rollback...")
+		if err = os.Rename(f.Path("wireleap_tun"), f.Path("wireleap_tun.prev")); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			err = fmt.Errorf("error while attempting to move wireleap_tun to wireleap_tun.prev: %s", err)
+			return
+		} else {
+			// if it does not exist, that is fine
+			err = nil
+		}
+	}
 	// force unpacking of files
 	log.Println("unpacking new embedded files...")
 	if err = cli.RunChild(f.Path("wireleap"), "init", "--force-unpack-only"); err != nil {
@@ -72,13 +85,20 @@ func PostRollbackHook(f fsdir.T) (err error) {
 		return
 	}
 	if tuncmd_platform.Available {
-		fp := f.Path("wireleap_tun")
-		fmt.Println("===================================")
-		fmt.Println("NOTE: to enable wireleap_tun again:")
-		fmt.Println("$ sudo chown 0:0", fp)
-		fmt.Println("$ sudo chmod u+s", fp)
-		fmt.Println("===================================")
-		fmt.Println("(to return to your shell prompt just press Return)")
+		log.Println("moving wireleap_tun.prev to wireleap_tun...")
+		if err = os.Rename(f.Path("wireleap_tun.prev"), f.Path("wireleap_tun")); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			fp := f.Path("wireleap_tun")
+			fmt.Println("===================================")
+			fmt.Println("no wireleap_tun.prev found")
+			fmt.Println("NOTE: to enable wireleap_tun again:")
+			fmt.Println("$ sudo chown 0:0", fp)
+			fmt.Println("$ sudo chmod u+s", fp)
+			fmt.Println("===================================")
+			fmt.Println("(to return to your shell prompt just press Return)")
+		} else {
+			// if it does not exist, that is fine
+			err = nil
+		}
 	}
 	return
 }
