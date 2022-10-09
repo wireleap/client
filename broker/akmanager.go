@@ -145,7 +145,7 @@ func (t *T) Import(u url.URL) (ak *accesskey.T, err error) {
 		}
 	}
 
-	if err = t.Fd.Set(t.pofs, filenames.Pofs); err != nil {
+	if err = t.Fd.SetIndented(t.pofs, filenames.Pofs); err != nil {
 		return nil, fmt.Errorf(
 			"could not save new pofs for %s: %s",
 			sc.String(), err,
@@ -266,7 +266,7 @@ func (t *T) RefreshSK() (err error) {
 	// now left with: faulty and untouched pofs
 	t.pofs = newps
 	// write new pofs
-	if err = t.Fd.Set(&t.pofs, filenames.Pofs); err != nil {
+	if err = t.Fd.SetIndented(&t.pofs, filenames.Pofs); err != nil {
 		return fmt.Errorf(
 			"could not write new %s: %s",
 			filenames.Pofs,
@@ -278,7 +278,7 @@ func (t *T) RefreshSK() (err error) {
 		return fmt.Errorf("no servicekey available")
 	}
 	// write new servicekey
-	if err = t.Fd.Set(&t.sk, filenames.Servicekey); err != nil {
+	if err = t.Fd.SetIndented(&t.sk, filenames.Servicekey); err != nil {
 		return fmt.Errorf(
 			"could not write new %s: %s",
 			filenames.Servicekey,
@@ -320,7 +320,7 @@ func (t *T) Activate() (err error) {
 	if err = t.RefreshSK(); err != nil {
 		return fmt.Errorf("error while activating servicekey with pof: %s", err)
 	}
-	if err = t.Fd.Set(t.sk, filenames.Servicekey); err != nil {
+	if err = t.Fd.SetIndented(t.sk, filenames.Servicekey); err != nil {
 		return fmt.Errorf("could not write new servicekey: %s", err)
 	}
 	t.reload()

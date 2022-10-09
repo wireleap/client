@@ -32,10 +32,10 @@ func GetContractInfo(cl *client.Client, sc *texturl.URL) (info *contractinfo.T, 
 }
 
 func SaveContractInfo(fm fsdir.T, ci *contractinfo.T, rl relaylist.T) (err error) {
-	if err = fm.Set(ci, filenames.Contract); err != nil {
+	if err = fm.SetIndented(ci, filenames.Contract); err != nil {
 		return fmt.Errorf("could not save contract info: %s", err)
 	}
-	if err = fm.Set(rl, filenames.Relays); err != nil {
+	if err = fm.SetIndented(rl, filenames.Relays); err != nil {
 		return fmt.Errorf("could not save contract relays: %s", err)
 	}
 	return

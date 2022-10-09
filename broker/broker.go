@@ -366,7 +366,7 @@ func (t *T) Shutdown() {
 
 func (t *T) Config() *clientcfg.C { return t.cfg }
 
-func (t *T) SaveConfig() error { return t.Fd.Set(&t.cfg, filenames.Config) }
+func (t *T) SaveConfig() error { return t.Fd.SetIndented(&t.cfg, filenames.Config) }
 
 func (t *T) SetUpgradeable(val bool) {
 	t.uMu.Lock()

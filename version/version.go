@@ -132,7 +132,7 @@ var MIGRATIONS = []*upgrade.Migration{
 				c.Broker.Circuit.Whitelist = make([]string, 0)
 			}
 			// address/port changes are merged automatically
-			if err := f.Set(&c, "config.json.next"); err != nil {
+			if err := f.SetIndented(&c, "config.json.next"); err != nil {
 				return fmt.Errorf("could not save config.json.next: %s", err)
 			}
 			log.Println("NOTE: ports used by Wireleap client have changed as follows:")
