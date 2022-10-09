@@ -25,7 +25,7 @@ func Cmd() *cli.Subcmd {
 				log.Fatalf("error while unpacking embedded files: %s", err)
 			}
 			if !*force {
-				if err := fm.Set(clientcfg.Defaults(), filenames.Config); err != nil {
+				if err := fm.SetIndented(clientcfg.Defaults(), filenames.Config); err != nil {
 					log.Fatalf("could not write initial config.json: %s", err)
 				}
 			}
